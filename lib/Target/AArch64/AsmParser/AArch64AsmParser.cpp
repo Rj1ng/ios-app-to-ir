@@ -896,14 +896,16 @@ public:
       AArch64MCRegisterClasses[AArch64::GPR64RegClassID].contains(Reg.RegNum);
   }
   bool isWSeqPair() const {
-    return Kind == k_Register && !Reg.isVector &&
-           AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID].contains(
-               Reg.RegNum);
+      return false;
+//    return Kind == k_Register && !Reg.isVector &&
+//           AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID].contains(
+//               Reg.RegNum);
   }
   bool isXSeqPair() const {
-    return Kind == k_Register && !Reg.isVector &&
-           AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID].contains(
-               Reg.RegNum);
+    return false;
+// /    return Kind == k_Register && !Reg.isVector &&
+//           AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID].contains(
+//               Reg.RegNum);
   }
 
   bool isGPR64sp0() const {
@@ -4476,11 +4478,11 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
   
   unsigned Pair = 0;
   if(isXReg) {
-    Pair = RI->getMatchingSuperReg(FirstReg, AArch64::sube64,
-           &AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID]);
+//    Pair = RI->getMatchingSuperReg(FirstReg, AArch64::sube64,
+//           &AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID]);
   } else {
-    Pair = RI->getMatchingSuperReg(FirstReg, AArch64::sube32,
-           &AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID]);
+//    Pair = RI->getMatchingSuperReg(FirstReg, AArch64::sube32,
+//           &AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID]);
   }
 
   Operands.push_back(AArch64Operand::CreateReg(Pair, false, S, getLoc(),

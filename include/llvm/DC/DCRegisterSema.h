@@ -154,8 +154,8 @@ public:
 
   Value *getRegNoCallback(unsigned RegNo);
 
-  Value *getReg(unsigned RegNo);
-  void setReg(unsigned RegNo, Value *Val);
+  virtual Value *getReg(unsigned RegNo);
+  virtual void setReg(unsigned RegNo, Value *Val);
 
   Type *getRegType(unsigned RegNo);
 

@@ -3247,8 +3247,8 @@ class LoadPairPostIdx<bits<2> opc, bit V, RegisterClass regtype,
 let mayStore = 1, mayLoad = 0 in
 class StorePairPostIdx<bits<2> opc, bit V, RegisterClass regtype,
                        Operand idxtype, string asm>
-    : BaseLoadStorePairPostIdx<opc, V, 0, (outs),
-                             (ins GPR64sp:$wback, regtype:$Rt, regtype:$Rt2,
+    : BaseLoadStorePairPostIdx<opc, V, 0, (outs GPR64sp:$wback),
+                             (ins regtype:$Rt, regtype:$Rt2,
                                   GPR64sp:$Rn, idxtype:$offset),
                              asm>,
       Sched<[WriteAdr, WriteSTP]>;
@@ -5419,10 +5419,10 @@ multiclass SIMDThreeScalarHS<bit U, bits<5> opc, string asm,
 multiclass SIMDThreeScalarHSTied<bit U, bit R, bits<5> opc, string asm,
                                  SDPatternOperator OpNode = null_frag> {
   def v1i32: BaseSIMDThreeScalarTied<U, 0b10, R, opc, (outs FPR32:$dst),
-                                     (ins FPR32:$Rd, FPR32:$Rn, FPR32:$Rm), 
+                                     (ins FPR32:$Rd, FPR32:$Rn, FPR32:$Rm),
                                      asm, []>;
   def v1i16: BaseSIMDThreeScalarTied<U, 0b01, R, opc, (outs FPR16:$dst),
-                                     (ins FPR16:$Rd, FPR16:$Rn, FPR16:$Rm), 
+                                     (ins FPR16:$Rd, FPR16:$Rn, FPR16:$Rm),
                                      asm, []>;
 }
 
@@ -8624,9 +8624,9 @@ multiclass SIMDLdSt4SingleAliases<string asm> {
 let Predicates = [HasNEON, HasV8_1a] in {
 
 class BaseSIMDThreeSameVectorTiedR0<bit Q, bit U, bits<2> size, bits<5> opcode,
-                                    RegisterOperand regtype, string asm, 
+                                    RegisterOperand regtype, string asm,
                                     string kind, list<dag> pattern>
-  : BaseSIMDThreeSameVectorTied<Q, U, size, opcode, regtype, asm, kind, 
+  : BaseSIMDThreeSameVectorTied<Q, U, size, opcode, regtype, asm, kind,
                                 pattern> {
   let Inst{21}=0;
 }
@@ -8636,7 +8636,7 @@ multiclass SIMDThreeSameVectorSQRDMLxHTiedHS<bit U, bits<5> opc, string asm,
     [(set (v4i16 V64:$dst),
           (Accum (v4i16 V64:$Rd),
                  (v4i16 (int_aarch64_neon_sqrdmulh (v4i16 V64:$Rn),
-                                                   (v4i16 V64:$Rm)))))]>;         
+                                                   (v4i16 V64:$Rm)))))]>;
   def v8i16 : BaseSIMDThreeSameVectorTiedR0<1, U, 0b01, opc, V128, asm, ".8h",
     [(set (v8i16 V128:$dst),
           (Accum (v8i16 V128:$Rd),
@@ -8700,28 +8700,28 @@ multiclass SIMDIndexedSQRDMLxHSDTied<bit U, bits<4> opc, string asm,
     let Inst{21} = idx{0};
   }
 
-  // FIXME: it would be nice to use the scalar (v1i32) instruction here, but 
+  // FIXME: it would be nice to use the scalar (v1i32) instruction here, but
   // an intermediate EXTRACT_SUBREG would be untyped.
-  // FIXME: direct EXTRACT_SUBREG from v2i32 to i32 is illegal, that's why we 
+  // FIXME: direct EXTRACT_SUBREG from v2i32 to i32 is illegal, that's why we
   // got it lowered here as (i32 vector_extract (v4i32 insert_subvector(..)))
   def : Pat<(i32 (Accum (i32 FPR32Op:$Rd),
-                       (i32 (vector_extract 
+                       (i32 (vector_extract
                                (v4i32 (insert_subvector
-                                       (undef), 
-                                        (v2i32 (int_aarch64_neon_sqrdmulh 
+                                       (undef),
+                                        (v2i32 (int_aarch64_neon_sqrdmulh
                                                  (v2i32 V64:$Rn),
-                                                 (v2i32 (AArch64duplane32 
+                                                 (v2i32 (AArch64duplane32
                                                           (v4i32 V128:$Rm),
                                                           VectorIndexS:$idx)))),
                                       (i32 0))),
                                (i64 0))))),
             (EXTRACT_SUBREG
                 (v2i32 (!cast<Instruction>(NAME # v2i32_indexed)
-                          (v2i32 (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), 
-                                                FPR32Op:$Rd, 
-                                                ssub)), 
+                          (v2i32 (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)),
+                                                FPR32Op:$Rd,
+                                                ssub)),
                           V64:$Rn,
-                          V128:$Rm, 
+                          V128:$Rm,
                           VectorIndexS:$idx)),
                 ssub)>;
 
@@ -8742,26 +8742,26 @@ multiclass SIMDIndexedSQRDMLxHSDTied<bit U, bits<4> opc, string asm,
   // FIXME: it would be nice to use the scalar (v1i32) instruction here, but
   // an intermediate EXTRACT_SUBREG would be untyped.
   def : Pat<(i32 (Accum (i32 FPR32Op:$Rd),
-                        (i32 (vector_extract 
-                               (v4i32 (int_aarch64_neon_sqrdmulh 
+                        (i32 (vector_extract
+                               (v4i32 (int_aarch64_neon_sqrdmulh
                                         (v4i32 V128:$Rn),
-                                        (v4i32 (AArch64duplane32 
+                                        (v4i32 (AArch64duplane32
                                                  (v4i32 V128:$Rm),
                                                  VectorIndexS:$idx)))),
                                (i64 0))))),
             (EXTRACT_SUBREG
                 (v4i32 (!cast<Instruction>(NAME # v4i32_indexed)
-                         (v4i32 (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), 
-                                               FPR32Op:$Rd, 
-                                               ssub)), 
+                         (v4i32 (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                                               FPR32Op:$Rd,
+                                               ssub)),
                          V128:$Rn,
-                         V128:$Rm, 
+                         V128:$Rm,
                          VectorIndexS:$idx)),
                 ssub)>;
 
   def i16_indexed : BaseSIMDIndexedTied<1, U, 1, 0b01, opc,
                                         FPR16Op, FPR16Op, V128_lo,
-                                        VectorIndexH, asm, ".h", "", "", ".h", 
+                                        VectorIndexH, asm, ".h", "", "", ".h",
                                         []> {
     bits<3> idx;
     let Inst{11} = idx{2};
@@ -8954,12 +8954,12 @@ class BaseCASP<string order, string size, RegisterOperand RC>
   let NP = 0;
 }
 
-multiclass CompareAndSwapPair<bits<1> Acq, bits<1> Rel, string order> {
-  let Sz = 0b00, Acq = Acq, Rel = Rel in 
-    def s : BaseCASP<order, "", WSeqPairClassOperand>;
-  let Sz = 0b01, Acq = Acq, Rel = Rel in 
-    def d : BaseCASP<order, "", XSeqPairClassOperand>;
-}
+//multiclass CompareAndSwapPair<bits<1> Acq, bits<1> Rel, string order> {
+//  let Sz = 0b00, Acq = Acq, Rel = Rel in
+//    def s : BaseCASP<order, "", WSeqPairClassOperand>;
+//  let Sz = 0b01, Acq = Acq, Rel = Rel in
+//    def d : BaseCASP<order, "", XSeqPairClassOperand>;
+//}
 
 let Predicates = [HasV8_1a] in
 class BaseSWP<string order, string size, RegisterClass RC>
@@ -9016,15 +9016,15 @@ class BaseLDOPregister<string op, string order, string size, RegisterClass RC>
   let Inst{4-0} = Rt;
 }
 
-multiclass LDOPregister<bits<3> opc, string op, bits<1> Acq, bits<1> Rel, 
+multiclass LDOPregister<bits<3> opc, string op, bits<1> Acq, bits<1> Rel,
                         string order> {
-  let Sz = 0b00, Acq = Acq, Rel = Rel, opc = opc in 
+  let Sz = 0b00, Acq = Acq, Rel = Rel, opc = opc in
     def b : BaseLDOPregister<op, order, "b", GPR32>;
-  let Sz = 0b01, Acq = Acq, Rel = Rel, opc = opc in 
+  let Sz = 0b01, Acq = Acq, Rel = Rel, opc = opc in
     def h : BaseLDOPregister<op, order, "h", GPR32>;
-  let Sz = 0b10, Acq = Acq, Rel = Rel, opc = opc in 
+  let Sz = 0b10, Acq = Acq, Rel = Rel, opc = opc in
     def s : BaseLDOPregister<op, order, "", GPR32>;
-  let Sz = 0b11, Acq = Acq, Rel = Rel, opc = opc in 
+  let Sz = 0b11, Acq = Acq, Rel = Rel, opc = opc in
     def d : BaseLDOPregister<op, order, "", GPR64>;
 }
 
@@ -9034,21 +9034,21 @@ class BaseSTOPregister<string asm, RegisterClass OP, Register Reg,
       InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn)>;
 
 multiclass STOPregister<string asm, string instr> {
-  def : BaseSTOPregister<asm # "lb", GPR32, WZR, 
+  def : BaseSTOPregister<asm # "lb", GPR32, WZR,
                     !cast<Instruction>(instr # "Lb")>;
-  def : BaseSTOPregister<asm # "lh", GPR32, WZR, 
+  def : BaseSTOPregister<asm # "lh", GPR32, WZR,
                     !cast<Instruction>(instr # "Lh")>;
-  def : BaseSTOPregister<asm # "l",  GPR32, WZR, 
+  def : BaseSTOPregister<asm # "l",  GPR32, WZR,
                     !cast<Instruction>(instr # "Ls")>;
-  def : BaseSTOPregister<asm # "l",  GPR64, XZR, 
+  def : BaseSTOPregister<asm # "l",  GPR64, XZR,
                     !cast<Instruction>(instr # "Ld")>;
-  def : BaseSTOPregister<asm # "b",  GPR32, WZR, 
+  def : BaseSTOPregister<asm # "b",  GPR32, WZR,
                     !cast<Instruction>(instr # "b")>;
-  def : BaseSTOPregister<asm # "h",  GPR32, WZR, 
+  def : BaseSTOPregister<asm # "h",  GPR32, WZR,
                     !cast<Instruction>(instr # "h")>;
-  def : BaseSTOPregister<asm,        GPR32, WZR, 
+  def : BaseSTOPregister<asm,        GPR32, WZR,
                     !cast<Instruction>(instr # "s")>;
-  def : BaseSTOPregister<asm,        GPR64, XZR, 
+  def : BaseSTOPregister<asm,        GPR64, XZR,
                     !cast<Instruction>(instr # "d")>;
 }
 

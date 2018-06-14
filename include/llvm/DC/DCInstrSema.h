@@ -149,6 +149,8 @@ protected:
                                       unsigned MIOperandNo) = 0;
   virtual void translateImplicit(unsigned RegNo) = 0;
 
+  virtual void translateTargetIntrinsic(unsigned IntrinsicID) = 0;
+
   // Try to do a custom translation of a full instruction.
   // Called before translating an instruction.
   // Return true if the translation shouldn't proceed.

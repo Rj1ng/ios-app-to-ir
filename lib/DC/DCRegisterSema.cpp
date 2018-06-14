@@ -18,6 +18,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <dlfcn.h>
+#include <llvm/Target/TargetRegisterInfo.h>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "dc-regsema"
@@ -113,8 +115,13 @@ void DCRegisterSema::saveAllLocalRegs(BasicBlock *BB, BasicBlock::iterator IP) {
   DCIRBuilder LocalBuilder(BB, IP);
 
   for (unsigned RI = 1, RE = getNumRegs(); RI != RE; ++RI) {
-    if (!RegAllocas[RI])
-      continue;
+    if (!RegAllocas[RI]) {
+      if (RI >= 199 && RI <= 207) {
+          createLocalValueForReg(RI);
+      } else {
+          continue;
+      }
+    }
     int OffsetInSet = RegOffsetsInSet[RI];
     if (OffsetInSet != -1)
       LocalBuilder.CreateStore(LocalBuilder.CreateLoad(RegAllocas[RI]),
@@ -127,8 +134,13 @@ void DCRegisterSema::restoreLocalRegs(BasicBlock *BB, BasicBlock::iterator IP) {
   Builder->SetInsertPoint(BB, IP);
 
   for (unsigned RI = 1, RE = getNumRegs(); RI != RE; ++RI) {
-    if (!RegAllocas[RI])
-      continue;
+      if (!RegAllocas[RI]) {
+        if (RI >= 199 && RI <= 207) {
+            createLocalValueForReg(RI);
+        } else {
+            continue;
+        }
+    }
     int OffsetInSet = RegOffsetsInSet[RI];
     if (OffsetInSet != -1)
       setReg(RI, Builder->CreateLoad(RegPtrs[RI]));

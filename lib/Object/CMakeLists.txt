@@ -13,6 +13,7 @@ add_llvm_library(LLVMObject
   MachOUniversal.cpp
   Object.cpp
   ObjectFile.cpp
+  ObjectiveCFile.cpp
   RecordStreamer.cpp
   SymbolicFile.cpp
   SymbolSize.cpp

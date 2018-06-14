@@ -751,10 +751,10 @@ defm CASL  : CompareAndSwap<0, 1, "l">;
 defm CASAL : CompareAndSwap<1, 1, "al">;
 
 // v8.1 atomic CASP
-defm CASP   : CompareAndSwapPair<0, 0, "">;
-defm CASPA  : CompareAndSwapPair<1, 0, "a">;
-defm CASPL  : CompareAndSwapPair<0, 1, "l">;
-defm CASPAL : CompareAndSwapPair<1, 1, "al">;
+//defm CASP   : CompareAndSwapPair<0, 0, "">;
+//defm CASPA  : CompareAndSwapPair<1, 0, "a">;
+//defm CASPL  : CompareAndSwapPair<0, 1, "l">;
+//defm CASPAL : CompareAndSwapPair<1, 1, "al">;
 
 // v8.1 atomic SWP
 defm SWP   : Swap<0, 0, "">;

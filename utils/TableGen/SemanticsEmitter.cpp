@@ -249,6 +249,23 @@ private:
     unsigned NumNodeDefs = TPN->getNumChildren() - 1;
     const TreePatternNode *LastChild = TPN->getChild(TPN->getNumChildren() - 1);
 
+      if (NumNodeDefs != LastChild->getNumTypes()) {
+          errs() << "\nFlatten\n";
+          errs() << NumNodeDefs << " ";
+          TPN->dump();
+          errs() << "\n";
+          errs() << LastChild->getNumTypes() << " ";
+          LastChild->dump();
+          errs() << "\n";
+//          for (unsigned i = 0; i < LastChild->getNumChildren(); ++i) {
+//              errs() << "Num Types: " << LastChild->getChild(i)->getNumTypes() << "\n";
+//              errs() << "Type: " << LastChild->getChild(i)->getType(0) << "\n";
+//          }
+//          errs() << LastChild->getNumChildren() << "\n";
+//          errs() << "\n" <<LastChild->getChild(2)->getNumTypes() << "\n";
+//          errs() << LastChild->getType(0); TPN->getChild(1)->dump();
+          return;
+      }
     assert(NumNodeDefs == LastChild->getNumTypes() &&
            "Invalid 'set': last child needs to define all the others.");
 

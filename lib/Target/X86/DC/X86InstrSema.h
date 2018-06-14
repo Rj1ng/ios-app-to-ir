@@ -43,6 +43,7 @@ public:
   void translateTargetOpcode();
   void translateCustomOperand(unsigned OperandType, unsigned MIOperandNo);
   void translateImplicit(unsigned RegNo);
+    virtual void translateTargetIntrinsic(unsigned IntrinsicID) { llvm_unreachable("Not implemented");}
 
   bool translateTargetInst();
 

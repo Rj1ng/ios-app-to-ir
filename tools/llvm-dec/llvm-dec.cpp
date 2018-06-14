@@ -29,6 +29,12 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "FunctionNamePass.h"
+#include "TailCallPass.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Bitcode/ReaderWriter.h"
 
 using namespace llvm;
 using namespace object;
@@ -49,6 +55,14 @@ static cl::opt<bool>
 AnnotateIROutput("annot", cl::desc("Enable IR output anotations"),
                  cl::init(false));
 
+static cl::opt<bool>
+        NoPrint("no-print", cl::desc("Do not print the produced source"),
+                         cl::init(false));
+
+static cl::opt<bool>
+     PrintBitcode("bc", cl::desc("Bitcode output"),
+                      cl::init(false));
+
 static cl::opt<unsigned>
 TransOptLevel("O",
               cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -59,6 +73,9 @@ static cl::opt<bool>
 EnableDisassemblyCache("enable-mcod-disass-cache",
     cl::desc("Enable the MC Object disassembly instruction cache"),
     cl::init(false), cl::Hidden);
+
+static cl::opt<std::string>
+        OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"));
 
 static StringRef ToolName;
 
@@ -229,8 +246,44 @@ int main(int argc, char **argv) {
   if (!TranslationEntrypoint)
     TranslationEntrypoint = MOS->getEntrypoint();
 
-  DT->createMainFunctionWrapper(
-      DT->translateRecursivelyAt(TranslationEntrypoint));
-  DT->printCurrentModule(outs());
+//  DT->createMainFunctionWrapper(
+//      DT->translateRecursivelyAt(TranslationEntrypoint));
+    DT->translateAllKnownFunctions();
+    Function *main_fn = DT->getCurrentTranslationModule()->getFunction("fn_" + utohexstr(TranslationEntrypoint));
+//    assert(main_fn);
+    if (main_fn)
+        DT->createMainFunctionWrapper(main_fn);
+
+    if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(Obj)) {
+        legacy::PassManager *pm = new legacy::PassManager();
+        MCObjectDisassembler::AddressSetTy functionStarts = OD->findFunctionStarts();
+//        pm->add(new TailCallPass(functionStarts));
+        pm->add(new FunctionNamePass(MachO, DisAsm));
+        pm->run(*DT->getCurrentTranslationModule());
+    }
+
+    if (!NoPrint) {
+        std::error_code EC;
+        sys::fs::OpenFlags OpenFlags = sys::fs::F_None;
+        if (!Binary)
+            OpenFlags |= sys::fs::F_Text;
+        std::unique_ptr<tool_output_file> FDOut = llvm::make_unique<tool_output_file>(OutputFilename, EC,
+                                                         OpenFlags);
+        if (EC) {
+            errs() << EC.message() << '\n';
+            return -1;
+        }
+
+        if (PrintBitcode) {
+            WriteBitcodeToFile(DT->getCurrentTranslationModule(), FDOut->os(), true);
+        } else {
+            FDOut->os() << *DT->getCurrentTranslationModule();
+        }
+
+        FDOut->keep();
+        //DT->printCurrentModule(FDOut->os());
+
+
+    }
   return 0;
 }

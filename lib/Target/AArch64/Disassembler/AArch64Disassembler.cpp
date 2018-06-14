@@ -1570,16 +1570,18 @@ static DecodeStatus DecodeWSeqPairsClassRegisterClass(MCInst &Inst,
                                                       unsigned RegNo,
                                                       uint64_t Addr,
                                                       const void *Decoder) {
-  return DecodeGPRSeqPairsClassRegisterClass(Inst, 
-                                             AArch64::WSeqPairsClassRegClassID,
-                                             RegNo, Addr, Decoder);
+//  return DecodeGPRSeqPairsClassRegisterClass(Inst,
+//                                             AArch64::WSeqPairsClassRegClassID,
+//                                             RegNo, Addr, Decoder);
+    return Fail;
 }
 
 static DecodeStatus DecodeXSeqPairsClassRegisterClass(MCInst &Inst,
                                                       unsigned RegNo,
                                                       uint64_t Addr,
                                                       const void *Decoder) {
-  return DecodeGPRSeqPairsClassRegisterClass(Inst, 
-                                             AArch64::XSeqPairsClassRegClassID,
-                                             RegNo, Addr, Decoder);
+//  return DecodeGPRSeqPairsClassRegisterClass(Inst,
+//                                             AArch64::XSeqPairsClassRegClassID,
+//                                             RegNo, Addr, Decoder);
+    return Fail;
 }

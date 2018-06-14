@@ -11,11 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <llvm/ADT/StringExtras.h>
 #include "AArch64MCTargetDesc.h"
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
 #include "InstPrinter/AArch64InstPrinter.h"
 #include "llvm/MC/MCCodeGenInfo.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -33,6 +35,73 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "AArch64GenRegisterInfo.inc"
+
+namespace llvm {
+    namespace AArch64 {
+        class AArch64MMCInstrAnalysis : public MCInstrAnalysis {
+        public:
+            AArch64MMCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) { };
+
+            virtual bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                                        uint64_t &Target) const {
+                switch (Inst.getOpcode()) {
+                    case AArch64::Bcc: {
+                        int64_t Offset = Inst.getOperand(1).getImm() * 4;
+                        Target = Addr + Offset;
+                        return true;
+                    }
+                    case AArch64::B: {
+                        int64_t Offset = Inst.getOperand(0).getImm() * 4;
+                        Target = Addr + Offset;
+                        return true;
+                    }
+                    case AArch64::CBNZW:
+                    case AArch64::CBNZX:
+                    case AArch64::CBZW:
+                    case AArch64::CBZX: {
+                        int64_t Offset = Inst.getOperand(1).getImm() * 4;
+                        Target = Addr + Offset;
+                        return true;
+                    }
+                    case AArch64::TBZW:
+                    case AArch64::TBZX:
+                    case AArch64::TBNZW:
+                    case AArch64::TBNZX: {
+                        int64_t Offset = Inst.getOperand(2).getImm() * 4;
+                        Target = Addr + Offset;
+                        return true;
+                    }
+                    case AArch64::BL: {
+                        int64_t Offset = Inst.getOperand(0).getImm() * 4;
+                        Target = Addr + Offset;
+                        return true;
+                    }
+                    case AArch64::BLR: {
+//                        errs() << "Branch Link Register: " << utohexstr(Addr) << "\n";
+//                        llvm_unreachable("Can't identify target for BLR!?");
+                        return false;
+                    }
+                    case AArch64::BR: {
+//                        errs() << "Branch Register: " << utohexstr(Addr) << "\n";
+                    }
+
+                }
+                return MCInstrAnalysis::evaluateBranch(Inst, Addr, Size, Target);
+            }
+            virtual bool isCall(const MCInst &Inst) const {
+                switch (Inst.getOpcode()) {
+                    case AArch64::BL: {
+                        return true;
+                    }
+                    case AArch64::BLR: {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+    }
+}
 
 static MCInstrInfo *createAArch64MCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
@@ -132,6 +201,11 @@ static MCStreamer *createMachOStreamer(MCContext &Ctx, MCAsmBackend &TAB,
                              /*LabelSections*/ true);
 }
 
+static MCInstrAnalysis *createAArch64MCInstrAnalysis(const MCInstrInfo *Info) {
+//  return new MCInstrAnalysis(Info);
+    return new llvm::AArch64::AArch64MMCInstrAnalysis(Info);
+}
+
 // Force static initialization.
 extern "C" void LLVMInitializeAArch64TargetMC() {
   for (Target *T :
@@ -167,6 +241,9 @@ extern "C" void LLVMInitializeAArch64TargetMC() {
                                               createAArch64AsmTargetStreamer);
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createAArch64MCInstPrinter);
+
+    // Register the MC instruction analyzer.
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createAArch64MCInstrAnalysis);
   }
 
   // Register the asm backend.

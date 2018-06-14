@@ -20,6 +20,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/MC/MCInst.h"
 #include <vector>
+#include "llvm/Object/ObjectiveCFile.h"
 
 namespace llvm {
 
@@ -72,6 +73,8 @@ public:
     MOS = ObjectSymbolizer;
   }
 
+    AddressSetTy findFunctionStarts();
+
 protected:
   const object::ObjectFile &Obj;
   const MCDisassembler &Dis;
@@ -109,6 +112,12 @@ private:
   void disassembleFunctionAt(MCModule *Module, MCFunction *MCFN,
                              uint64_t BeginAddr, AddressSetTy &CallTargets,
                              AddressSetTy &TailCallTargets);
+    bool checkBranch(MCInst &Inst, uint64_t Target);
+
+
+    AddressSetTy FunctionStarts;
+  bool Stripped;
+    std::unique_ptr<ObjectiveCFile> ObjCFile;
 };
 
 }

@@ -79,6 +79,14 @@ include "AArch64SchedA53.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
 
+
+//===----------------------------------------------------------------------===//
+// Instruction and Register semantics
+//===----------------------------------------------------------------------===//
+
+include "AArch64Sema.td"
+
+
 def ProcA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors",
                                    [FeatureFPARMv8,

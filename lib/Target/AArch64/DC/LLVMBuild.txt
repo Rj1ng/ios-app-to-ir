@@ -1,4 +1,4 @@
-;===- ./lib/Target/AArch64/LLVMBuild.txt -------------------------*- Conf -*--===;
+;===- ./lib/Target/X86/DC/LLVMBuild.txt ------------------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,21 +15,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo Utils DC
-
 [component_0]
-type = TargetGroup
-name = AArch64
-parent = Target
-has_asmparser = 1
-has_asmprinter = 1
-has_disassembler = 1
-has_jit = 1
-
-[component_1]
 type = Library
-name = AArch64CodeGen
+name = AArch64DC
 parent = AArch64
-required_libraries = AArch64AsmPrinter AArch64Desc AArch64Info AArch64Utils Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target
+required_libraries = DC MC Support AArch64Info
 add_to_library_groups = AArch64

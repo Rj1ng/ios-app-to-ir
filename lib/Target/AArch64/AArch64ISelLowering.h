@@ -209,7 +209,9 @@ enum NodeType : unsigned {
   LD4LANEpost,
   ST2LANEpost,
   ST3LANEpost,
-  ST4LANEpost
+  ST4LANEpost,
+  AARCH_REG_EXT,
+  AARCH_BC_I64
 };
 
 } // end namespace AArch64ISD

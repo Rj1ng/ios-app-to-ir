@@ -23,7 +23,146 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <vector>
+#include <sstream>
+
+namespace llvm {
+class NonVolatileRegistersPass : public FunctionPass {
+    public:
+        static char ID;
+
+        NonVolatileRegistersPass() : FunctionPass(ID) { };
+
+        virtual bool runOnFunction(Function &F);
+
+    private:
+        bool hasCall(const BasicBlock &BB);
+        bool isNonVolatile(uint64_t Idx);
+        bool isStack(uint64_t Idx);
+        void replaceLoaded(Instruction *StoreInst);
+    };
+}
+
 using namespace llvm;
+
+char NonVolatileRegistersPass::ID = 0;
+
+bool NonVolatileRegistersPass::runOnFunction(Function &F) {
+
+        if (F.isDeclaration() || F.isIntrinsic()) {
+            return false;
+        }
+        std::set<Value *> NonVolatileAndStackPointers;
+        std::set<Value *> NonVolatilePointers;
+
+        BasicBlock &Entry = F.getEntryBlock();
+        for (BasicBlock::iterator I_it = Entry.begin(); I_it != Entry.end(); ++I_it) {
+            if (I_it->getOpcode() == Instruction::GetElementPtr) {
+                if (ConstantInt *ConstIdx = dyn_cast<ConstantInt>(I_it->getOperand(2))) {
+                    if (isNonVolatile(ConstIdx->getZExtValue())) {
+                        NonVolatileAndStackPointers.insert(&*I_it);
+                        NonVolatilePointers.insert(&*I_it);
+                    } else if (isStack(ConstIdx->getZExtValue())) {
+                        NonVolatileAndStackPointers.insert(&*I_it);
+                    }
+                }
+            }
+        }
+
+        for (Function::iterator BB_it = F.begin(); BB_it != F.end(); ++BB_it) {
+            if (!hasCall(*BB_it))
+                continue;
+            for (BasicBlock::iterator I_it = BB_it->begin(); I_it != BB_it->end(); ++I_it) {
+                if (I_it->getOpcode() == Instruction::Store) {
+                    std::set<Value *>::iterator S_it = NonVolatileAndStackPointers.find(I_it->getOperand(1));
+                    if (S_it != NonVolatileAndStackPointers.end()) {
+                        replaceLoaded(&*I_it);
+                    }
+                }
+            }
+        }
+
+        std::set<Instruction*> toRemove;
+
+        for (auto &ptr : NonVolatilePointers) {
+
+            for (auto ptrUser : ptr->users()) {
+                if (StoreInst *storeInst = dyn_cast<StoreInst>(ptrUser)) {
+                    toRemove.insert(storeInst);
+                }
+            }
+        }
+
+        for (auto &r : toRemove) {
+            r->dropAllReferences();
+            r->removeFromParent();
+//                r->dump();
+        }
+        return true;
+}
+
+bool NonVolatileRegistersPass::hasCall(const BasicBlock &BB) {
+    for (BasicBlock::const_iterator I_it = BB.begin(); I_it != BB.end(); ++I_it) {
+        if (I_it->getOpcode() == Instruction::Call) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool NonVolatileRegistersPass::isNonVolatile(uint64_t Idx) {
+    switch (Idx) {
+        default:
+            break;
+        case 24:
+        case 25:
+        case 26:
+        case 27:
+        case 28:
+        case 29:
+        case 30:
+        case 31:
+        case 32:
+        case 33:
+            return true;
+    }
+    return false;
+}
+
+bool NonVolatileRegistersPass::isStack(uint64_t Idx) {
+    switch (Idx) {
+        default:
+            break;
+        case 3:
+        case 0:
+            return true;
+    }
+    return false;
+}
+
+void NonVolatileRegistersPass::replaceLoaded(Instruction *StoreInst) {
+    Value *Ptr = StoreInst->getOperand(1);
+    Value *V = StoreInst->getOperand(0);
+    if (!V)
+        StoreInst->dump();
+    assert(V);
+
+    BasicBlock *BB = StoreInst->getParent();
+    Instruction *Load = nullptr;
+    for (BasicBlock::iterator I_it = BB->begin(); I_it != BB->end(); ++I_it) {
+        if (I_it->getOpcode() == Instruction::Load && I_it->getOperand(0) == Ptr) {
+            Load = &*I_it;
+        }
+    }
+
+    if (!Load)
+        return;
+
+//    for (Value::const_use_iterator U_it = Load->use_begin(); U_it != Load->use_end(); ++U_it) {
+//
+//    }
+    if (Load != V)
+        Load->replaceAllUsesWith(V);
+}
 
 #define DEBUG_TYPE "dctranslator"
 
@@ -52,8 +191,16 @@ Module *DCTranslator::finalizeTranslationModule() {
   CurrentModule->setDataLayout(DL);
 
   CurrentFPM.reset(new legacy::FunctionPassManager(CurrentModule));
-  if (OptLevel >= TransOpt::Less)
-    CurrentFPM->add(createPromoteMemoryToRegisterPass());
+
+  if (OptLevel >= TransOpt::Less) {
+    CurrentFPM->add(new NonVolatileRegistersPass());
+    CurrentFPM->add(createInstructionCombiningPass());
+    CurrentFPM->add(createSROAPass());
+//    CurrentFPM->add(createCFGSimplificationPass());
+//    CurrentFPM->add(createConstantPropagationPass());
+
+//    CurrentFPM->add(createPromoteMemoryToRegisterPass());
+  }
   if (OptLevel >= TransOpt::Default)
     CurrentFPM->add(createDeadCodeEliminationPass());
   if (OptLevel >= TransOpt::Aggressive)
@@ -65,8 +212,17 @@ Module *DCTranslator::finalizeTranslationModule() {
 
 void DCTranslator::translateAllKnownFunctions() {
   MCObjectDisassembler::AddressSetTy DummyTailCallTargets;
-  for (const auto &F : MCM.funcs())
-    translateFunction(&*F, DummyTailCallTargets);
+  for (const auto &F : MCM.funcs()) {
+//      if (F->getName() != "fn_100ADE014")
+//          continue;
+    //  StringRef FAddress = F->getName().substr(3);
+    //  uint64_t address = 0;
+    //  FAddress.getAsInteger<uint64_t>(16, address);
+    //  if (address && address < 0x100BC2AE4) {
+    //      continue;
+    //  }
+      translateFunction(&*F, DummyTailCallTargets);
+  }
 }
 
 DCTranslator::~DCTranslator() {}
@@ -99,8 +255,7 @@ Function *DCTranslator::translateRecursivelyAt(uint64_t Addr) {
     }
 
     MCObjectDisassembler::AddressSetTy CallTargets, TailCallTargets;
-    MCFunction *MCFN =
-        MCOD->createFunction(&MCM, Addr, CallTargets, TailCallTargets);
+    MCFunction *MCFN = MCOD->createFunction(&MCM, Addr, CallTargets, TailCallTargets);
 
     // If the function is empty, it is the declaration of an external function.
     if (MCFN->empty()) {
