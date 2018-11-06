@@ -100,7 +100,10 @@ void ObjectiveCFile::resolveMethods() {
 
 StringRef ObjectiveCFile::getClassName(ArrayRef<uint8_t> &ObjcClassnames, uint64_t ObjcClassNamesAddress,
                                          uint64_t Address) {
-    assert(ObjcClassNamesAddress <= Address && Address <= ObjcClassNamesAddress + ObjcClassnames.size());
+    if(!(ObjcClassNamesAddress <= Address && Address <= ObjcClassNamesAddress + ObjcClassnames.size())){
+        erro() << "[+] assert failed:\n\tObjcClassNamesAddress: 0x" << utohexstr(ObjcClassnamesAddress) 
+            << "\n\tObjcClassNames size: 0x" << utohexstr(ObjcClassnames.size()) << "\n\tAddress: 0x" << utohexstr(Address);
+    }
     StringRef s((char*)ObjcClassnames.slice(Address - ObjcClassNamesAddress).data());
     return s;
 }
