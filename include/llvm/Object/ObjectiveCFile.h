@@ -86,6 +86,9 @@ namespace llvm {
         uint64_t ObjcDataAddress = 0;
         ArrayRef<uint8_t> ObjcDataData;
 
+        uint64_t DataAddress = 0;
+        ArrayRef<uint8_t> DataData;
+
         uint64_t ObjcConstAddress = 0;
         ArrayRef<uint8_t> ObjcConstData;
 
@@ -95,6 +98,10 @@ namespace llvm {
         uint64_t ObjcClassnamesAddress = 0;
         ArrayRef<uint8_t> ObjcClassnamesData;
 
+        //__cstring section strings ,to get Swift classname.
+        uint64_t cStringsAddress = 0;
+        ArrayRef<uint8_t> cStringsData;
+
         uint64_t ObjcCatlistAddress = 0;
         ArrayRef<uint8_t> ObjcCatlistData;
 
@@ -102,10 +109,12 @@ namespace llvm {
 
         void resolveMethods();
 
-        void resolveMethods(ObjcClassInfoStruct_t *ClassInfo, bool ClassMethods);
-        void resolveMethods(ObjcCatInfoStruct_t *CatInfo, bool ClassMethods, uint64_t CatInfoAddress, ObjcClassInfoStruct_t *ClassInfo);
+        void resolveMethods(ObjcClassInfoStruct_t *ClassInfo, bool ClassMethods, bool isSwiftClass);
+        void resolveMethods(ObjcCatInfoStruct_t *CatInfo, bool ClassMethods, uint64_t CatInfoAddress, ObjcClassInfoStruct_t *ClassInfo, bool isSwiftClass);
 
         StringRef getClassName(ArrayRef<uint8_t> &ObjcClassnames, uint64_t ObjcClassNamesAddress, uint64_t Address);
+        StringRef getClassName(ArrayRef<uint8_t> &cStrings, uint64_t cStringsAddress, uint64_t Address, bool isSwiftClass);
+        
         StringRef getMethodName(ArrayRef<uint8_t> &ObjcMethodnames, uint64_t ObjcMethodnamesAddress, uint64_t Address);
 
         StringRef getClassName(uint64_t Pointer);

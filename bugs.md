@@ -28,6 +28,9 @@ Stack dump:
 [1]    38450 illegal hardware instruction  ./llvm-dec ~/Downloads/Bins/tztHuaTaiZLMobile -o tzhuaTaiZLMobile-ir.txt
 ```
 
+aarch64 decode failed
+status: unsolved
+
 ## vlc
 
 ```text
@@ -57,6 +60,39 @@ Stack dump:
 [1]    39225 illegal hardware instruction  ./llvm-dec ~/Downloads/Bins/vlc-arm64 -o vlc-ir.txt
 ```
 
+Swift class resolve failed.
+status: solved
+
+```text
+Not implemented
+UNREACHABLE executed at /Users/ring/Documents/pwnzen/Project-ios/ios-app-to-ir/lib/Target/AArch64/DC/AArch64InstrSema.cpp:2350!
+0  llvm-dec                 0x00000001108af42e llvm::sys::PrintStackTrace(llvm::raw_ostream&) + 46
+1  llvm-dec                 0x00000001108b12a9 PrintStackTraceSignalHandler(void*) + 25
+2  llvm-dec                 0x00000001108ad439 llvm::sys::RunSignalHandlers() + 425
+3  llvm-dec                 0x00000001108b1641 SignalHandler(int) + 465
+4  libsystem_platform.dylib 0x00007fff6ad66b3d _sigtramp + 29
+5  libsystem_platform.dylib 000000000000000000 _sigtramp + 2502530272
+6  llvm-dec                 0x00000001108b12cb raise + 27
+7  llvm-dec                 0x00000001108b1372 abort + 18
+8  llvm-dec                 0x0000000110822400 LLVMInstallFatalErrorHandler + 0
+9  llvm-dec                 0x000000010fc07807 llvm::AArch64InstrSema::translateTargetOpcode() + 52903
+10 llvm-dec                 0x000000010fd89c9d llvm::DCInstrSema::translateOpcode(unsigned int) + 157
+11 llvm-dec                 0x000000010fd89b5b llvm::DCInstrSema::translateInst(llvm::MCDecodedInst const&, llvm::DCTranslatedInst&) + 603
+12 llvm-dec                 0x000000010fdada77 llvm::DCTranslator::translateFunction(llvm::MCFunction*, std::__1::vector<unsigned long long, std::__1::allocator<unsigned long long> > const&) + 3767
+13 llvm-dec                 0x000000010fdacab6 llvm::DCTranslator::translateAllKnownFunctions() + 566
+14 llvm-dec                 0x000000010fa7bcb6 main + 10646
+15 libdyld.dylib            0x00007fff6ab7d08d start + 1
+16 libdyld.dylib            0x0000000000000002 start + 2504535926
+Stack dump:
+0.	Program arguments: ./bin/llvm-dec /Users/ring/Downloads/Bins/vlc-arm64
+1.	DC: Translating Function at address 1004DCAB4
+2.	DC: Translating Basic Block at address 1004DCC10
+[1]    17217 illegal hardware instruction  ./bin/llvm-dec ~/Downloads/Bins/vlc-arm64
+```
+
+unkonwn error
+status: unsolved
+
 ## koubei
 
 0: OPC_ExtractField(26, 3): 5
@@ -76,3 +112,6 @@ Found branch to 100736D48!
 Found terminator!
 Looking for block at 1076ECE10
 LLVM ERROR: No suitable region for disassembly at 0x1076ECE10
+
+unkonwn error
+status: unsolved

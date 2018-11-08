@@ -13,6 +13,8 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
 #include <vector>
+#include "llvm/Support/raw_os_ostream.h"
+
 
 namespace llvm {
 
@@ -161,13 +163,26 @@ namespace llvm {
 
     /// slice(n) - Chop off the first N elements of the array.
     ArrayRef<T> slice(size_t N) const {
+      //errs() << "[+]N: " << N << "\tsize(): " << size() << "\n";
       assert(N <= size() && "Invalid specifier");
       return ArrayRef<T>(data()+N, size()-N);
     }
-
+    
+    /// slice(n, isSwift) - Chop off the first N elements of the array.
+    /// try to fixup the swift class resolve error.
+    ArrayRef<T> slice(size_t N, bool isSwift, bool object) const {
+      //errs() << "[+]N: " << N << "\tsize(): " << size() << "\n";
+      assert(N <= size() && "Invalid specifier");
+      if (isSwift) {
+        return ArrayRef<T>(data()+N-1, size()-N);
+      }
+      return ArrayRef<T>(data()+N, size()-N);
+    }
+    
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
     /// elements in the array.
     ArrayRef<T> slice(unsigned N, unsigned M) const {
+      //errs() << "[+]N: " << N << "\tM: " << M << "\tsize(): " << size() << "\n";
       assert(N+M <= size() && "Invalid specifier");
       return ArrayRef<T>(data()+N, M);
     }
