@@ -2,9 +2,10 @@
 #include <llvm/Object/ObjectiveCFile.h>
 #include "llvm/Object/ObjectiveCFile.h"
 #include "llvm/Support/raw_os_ostream.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Debug.h"
 
+#define DEBUG_TYPE "object-c"
 using namespace llvm;
 using namespace object;
 
@@ -42,8 +43,8 @@ void ObjectiveCFile::resolveMethods() {
             cStringsAddress = S_it->getAddress();
             StringRef cStringsContent;
             S_it->getContents(cStringsContent);
-            errs() << "[+]cStringsContent.data address: " << cStringsContent.data() 
-                << "\tcStringsContent.size: " << cStringsContent.size() << "\n";
+            DEBUG(errs() << "[+]cStringsContent.data address: " << cStringsContent.data() 
+                << "\tcStringsContent.size: " << cStringsContent.size() << "\n");
             cStringsData = ArrayRef<uint8_t>((uint8_t*)cStringsContent.data(), cStringsContent.size());
         } else if (SectionName == "__objc_methname") {
             ObjcMethodnamesAddress = S_it->getAddress();
@@ -75,40 +76,39 @@ void ObjectiveCFile::resolveMethods() {
         assert(ObjcDataAddress <= ClassRef && ClassRef <= ObjcDataAddress + ObjcDataData.size());
 
         ObjcDataStruct_t *ClassData = (ObjcDataStruct_t*)ObjcDataData.slice(ClassRef - ObjcDataAddress).data();
-        errs() << "[+] ObjcDataAddress address: 0x" << utohexstr(ObjcDataAddress) << "\n";
-        errs() << "[+] ClassData ISA address: 0x" << utohexstr(ClassData->ISA) << "\n";
+        DEBUG(errs() << "[+] ObjcDataAddress address: 0x" << utohexstr(ObjcDataAddress) << "\n");
+        DEBUG(errs() << "[+] ClassData ISA address: 0x" << utohexstr(ClassData->ISA) << "\n");
 
 
         assert(ObjcConstAddress <= ClassData->Data && ClassData->Data <= ObjcConstAddress + ObjcConstData.size());
     
         //try to fix ClassInfo address error(isSwift)
-        errs() << "[+] ClassData->Data address: " << utohexstr(ClassData->Data) << "\tObjcConstAddress: " << utohexstr(ObjcConstAddress) << "\tisSwift: " 
-            << utohexstr((ClassData->Data & 1)) << "\n";
+        DEBUG(errs() << "[+] ClassData->Data address: " << utohexstr(ClassData->Data) << "\tObjcConstAddress: " << utohexstr(ObjcConstAddress) << "\tisSwift: " 
+            << utohexstr((ClassData->Data & 1)) << "\n");
         
         bool isSwiftClass = (bool)(ClassData->Data & 1);
         ObjcClassInfoStruct_t *ClassInfo = (ObjcClassInfoStruct_t*)ObjcConstData.slice((ClassData->Data  -  ObjcConstAddress), isSwiftClass, true).data();
-        //ObjcClassInfoStruct_t *ClassInfo = (ObjcClassInfoStruct_t*)ObjcConstData.slice((ClassData->Data  -  ObjcConstAddress)).data();     
-        errs() << "[+] ClassInfo size: 0x" << utohexstr(sizeof(*ClassInfo)) << "\n";           
+        //errs() << "[+] ClassInfo size: 0x" << utohexstr(sizeof(*ClassInfo)) << "\n";           
         resolveMethods(ClassInfo, false, isSwiftClass);
 
         if (ClassData->ISA) {
-            errs() << "[+]ClassData->ISA address: 0x" << utohexstr(ClassData->ISA) << "\tObjcDataAddress: 0x" << utohexstr(ObjcDataAddress) << "\n";
+            //DEBUG(errs() << "[+]ClassData->ISA address: 0x" << utohexstr(ClassData->ISA) << "\tObjcDataAddress: 0x" << utohexstr(ObjcDataAddress) << "\n");
             if (isSwiftClass) {
                 ObjcDataStruct_t *ISAData = (ObjcDataStruct_t *) DataData.slice(ClassData->ISA - DataAddress).data();
-                errs() << "ISA: " << utohexstr(ISAData->ISA) << "\n";
+                //errs() << "ISA: " << utohexstr(ISAData->ISA) << "\n";
 
                 ObjcClassInfoStruct_t *ISAClassInfo = (ObjcClassInfoStruct_t*)ObjcConstData.slice(ISAData->Data - ObjcConstAddress).data();
-                errs() << "[+]ISAClassInfo->BaseMethods address: "<< utohexstr(ISAClassInfo->BaseMethods) << "\n";
-                errs() << "[+]ISAClassInfo->Name: 0x" << utohexstr(ISAClassInfo->Name) << "\n";
-                //errs() << getClassName(ObjcClassnamesData, ObjcClassnamesAddress, ISAClassInfo->Name) << "\n";
+                DEBUG(errs() << "[+]ISAClassInfo->BaseMethods address: "<< utohexstr(ISAClassInfo->BaseMethods) << "\n");
+                DEBUG(errs() << "[+]ISAClassInfo->Name: 0x" << utohexstr(ISAClassInfo->Name) << "\n");
+                //(errs() << getClassName(ObjcClassnamesData, ObjcClassnamesAddress, ISAClassInfo->Name) << "\n");
                 resolveMethods(ISAClassInfo, true, true);
             } else{
                 ObjcDataStruct_t *ISAData = (ObjcDataStruct_t *) ObjcDataData.slice(ClassData->ISA - ObjcDataAddress).data();
-                errs() << "ISA: " << utohexstr(ISAData->ISA) << "\n";
+                (dbgs() << "ISA: " << utohexstr(ISAData->ISA) << "\n");
 
                 ObjcClassInfoStruct_t *ISAClassInfo = (ObjcClassInfoStruct_t*)ObjcConstData.slice(ISAData->Data - ObjcConstAddress).data();
-                errs() << utohexstr(ISAClassInfo->BaseMethods) << "\n";
-                errs() << "[+]ISAClassInfo->Name: 0x" << utohexstr(ISAClassInfo->Name) << "\n";
+                //errs() << utohexstr(ISAClassInfo->BaseMethods) << "\n";
+                DEBUG(errs() << "[+]ISAClassInfo->Name: 0x" << utohexstr(ISAClassInfo->Name) << "\n");
 
                 //errs() << getClassName(ObjcClassnamesData, ObjcClassnamesAddress, ISAClassInfo->Name) << "\n";
                 resolveMethods(ISAClassInfo, true, false);
@@ -128,7 +128,7 @@ void ObjectiveCFile::resolveMethods() {
         if (catInfo->Class) {
             ClassData = (ObjcDataStruct_t *) ObjcDataData.slice(catInfo->Class - ObjcDataAddress).data();
             //try to fix ClassInfo address error(isSwift)
-            errs() << "[+] Castlist ClassData->Data address: " << utohexstr(ClassData->Data) << "\n";
+            DEBUG(errs() << "[+] Castlist ClassData->Data address: " << utohexstr(ClassData->Data) << "\n");
             isSwiftClass = (bool)(ClassData->Data & 1);
             ClassInfo = (ObjcClassInfoStruct_t*)ObjcConstData.slice(ClassData->Data  -  ObjcConstAddress, isSwiftClass, true).data();
         }
@@ -140,8 +140,8 @@ void ObjectiveCFile::resolveMethods() {
 StringRef ObjectiveCFile::getClassName(ArrayRef<uint8_t> &ObjcClassnames, uint64_t ObjcClassNamesAddress,
                                          uint64_t Address) {
     if(!(ObjcClassNamesAddress <= Address && Address <= ObjcClassNamesAddress + ObjcClassnames.size())){
-        errs() << "[+] assert failed:\n\tObjcClassNamesAddress: 0x" << utohexstr(ObjcClassnamesAddress) 
-            << "\n\tObjcClassNames size: 0x" << utohexstr(ObjcClassnames.size()) << "\n\tAddress: 0x" << utohexstr(Address) << "\n";
+        DEBUG(errs() << "[+] assert failed:\n\tObjcClassNamesAddress: 0x" << utohexstr(ObjcClassnamesAddress) 
+            << "\n\tObjcClassNames size: 0x" << utohexstr(ObjcClassnames.size()) << "\n\tAddress: 0x" << utohexstr(Address) << "\n");
     }
     StringRef s((char*)ObjcClassnames.slice(Address - ObjcClassNamesAddress).data());
     return s;
@@ -151,8 +151,8 @@ StringRef ObjectiveCFile::getClassName(ArrayRef<uint8_t> &ObjcClassnames, uint64
 StringRef ObjectiveCFile::getClassName(ArrayRef<uint8_t> &cStrings, uint64_t cStringsAddress,
                                          uint64_t Address, bool isSwiftClass) {
     if(!(cStringsAddress <= Address && Address <= cStringsAddress + cStrings.size())){
-        errs() << "[+] assert failed:\n\tcStringsAddress: 0x" << utohexstr(cStringsAddress) 
-            << "\n\tObjcClassNames size: 0x" << utohexstr(cStrings.size()) << "\n\tAddress: 0x" << utohexstr(Address) << "\n";
+        DEBUG(errs() << "[+] assert failed:\n\tcStringsAddress: 0x" << utohexstr(cStringsAddress) 
+            << "\n\tObjcClassNames size: 0x" << utohexstr(cStrings.size()) << "\n\tAddress: 0x" << utohexstr(Address) << "\n");
     }
     StringRef s((char*)cStrings.slice(Address - cStringsAddress).data());
     return s;
@@ -205,10 +205,10 @@ void ObjectiveCFile::resolveMethods(ObjcCatInfoStruct_t *CatInfo, bool ClassMeth
         assert(true);
     }
 
-    errs() << "[+]CatInfo->Class address: 0x" << utohexstr(CatInfo->Class);
+    DEBUG(dbgs() << "[+]CatInfo->Class address: 0x" << utohexstr(CatInfo->Class));
     if (CatInfo->Class) {
         assert(ClassInfo && ClassInfo->Name);
-        errs() << "[+]CatInfo->Name address: 0x" << utohexstr(CatInfo->Name);
+        DEBUG(dbgs() << "[+]CatInfo->Name address: 0x" << utohexstr(CatInfo->Name));
         StringRef ClassName;
         if(isSwiftClass) {
             ClassName = getClassName(cStringsData, cStringsAddress, ClassInfo->Name, true);

@@ -29,6 +29,7 @@
 #include "llvm/MC/MCAnalysis/MCFunction.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "dc-sema"
@@ -387,6 +388,7 @@ DCInstrSema::translateInst(const MCDecodedInst &DecodedInst,
   }
 
   Idx = OpcodeToSemaIdx[CurrentInst->Inst.getOpcode()];
+  DEBUG(errs() << "[+]Idx: " << Idx << "\n");
   if (!translateTargetInst()) {
     if (Idx == 0)
       return false;
@@ -400,8 +402,10 @@ DCInstrSema::translateInst(const MCDecodedInst &DecodedInst,
 //                 OldPC, ConstantInt::get(OldPC->getType(), CurrentInst->Size)));
     }
 
-    while ((Opcode = Next()) != DCINS::END_OF_INSTRUCTION)
+    while ((Opcode = Next()) != DCINS::END_OF_INSTRUCTION) {
+      DEBUG(errs() << "[+]Opcode: " << Opcode << "\n"); 
       translateOpcode(Opcode);
+    }
   }
 
   Vals.clear();

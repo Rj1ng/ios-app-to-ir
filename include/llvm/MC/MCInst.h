@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 class raw_ostream;
@@ -61,6 +62,7 @@ public:
 
   /// \brief Returns the register number.
   unsigned getReg() const {
+    //errs() << "[+]isValid: " << isValid() << "\tisReg: " << isReg() << "\tisImm: " << isImm() << "\tisFPImm: " << isFPImm() << "\tisExpr: " << isExpr() << "\tisInst: " << isInst() << "\n";
     assert(isReg() && "This is not a register operand!");
     return RegVal;
   }

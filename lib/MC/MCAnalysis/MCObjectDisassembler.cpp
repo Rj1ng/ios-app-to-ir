@@ -57,7 +57,7 @@ MCObjectDisassembler::getRegionFor(uint64_t Addr) {
                     }
                 }
                 if (Next) {
-                    ArrayRef<uint8_t> data = it->Bytes.slice(Addr - it->Addr, Next - Addr);
+                    ArrayRef<uint8_t> data = it->Bytes.slice((Addr - it->Addr), (Next - Addr));
 //                auto Region = std::make_shared<MemoryRegion>(Addr, data);
                     //FIXME: What about releasing??????!!!!!!
                     MemoryRegion *Region = new MemoryRegion(Addr, data);

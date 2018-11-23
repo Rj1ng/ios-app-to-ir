@@ -311,12 +311,12 @@ void DCTranslator::translateFunction(
   for (auto &BB : *MCFN) {
     AddrPrettyStackTraceEntry X(BB->getStartAddr(), "Basic Block");
 
-    DEBUG(dbgs() << "Translating basic block starting at "
+    DEBUG(dbgs() << "Translating basic block starting at 0x"
                  << utohexstr(BB->getStartAddr()) << ", with " << BB->size()
                  << " instructions.\n");
     DIS.SwitchToBasicBlock(BB);
     for (auto &I : *BB) {
-      DEBUG(dbgs() << "Translating instruction:\n "; dbgs() << I.Inst << "\n";);
+      (dbgs() << "Translating instruction:\n " << I.Inst << " at 0x" << utohexstr(I.Address) << "\n");
       DCTranslatedInst TI(I);
       if (!DIS.translateInst(I, TI)) {
         errs() << "Cannot translate instruction: \n  ";

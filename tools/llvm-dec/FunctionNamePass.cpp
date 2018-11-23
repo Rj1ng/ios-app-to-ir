@@ -65,7 +65,7 @@ bool FunctionNamePass::runOnModule(Module &M) {
                     if (Addr) {
                         uint64_t R = StubToLocal[Addr];
                         StringRef RName = "fn_" + utohexstr(R);
-                        DEBUG(errs() << "Replace " << Call->getCalledFunction()->getName() << " with " << RName << "\n");
+                        (errs() << "Replace " << Call->getCalledFunction()->getName() << " with " << RName << "\n");
                         Function *F = M.getFunction(RName);
                         assert(F);
                         Call->setCalledFunction(F);
@@ -92,7 +92,7 @@ bool FunctionNamePass::runOnModule(Module &M) {
 
         if (A) {
             if (FunctionNames.find(A) != FunctionNames.end()) {
-                DEBUG(errs() << "Change fn_" << utohexstr(A) << " to " << FunctionNames[A] << "\n");
+                (errs() << "Change fn_" << utohexstr(A) << " to " << FunctionNames[A] << "\n");
                 F_it->setName(FunctionNames[A]);
 
             }

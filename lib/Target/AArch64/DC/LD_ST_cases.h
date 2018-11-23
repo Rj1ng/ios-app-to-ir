@@ -281,7 +281,17 @@
         Type *loadType = nullptr;
 
         unsigned int regNo = CurrentInst->Inst.getOperand(0).getReg();
-        if (regNo >= AArch64::Q0_Q1 && regNo <= AArch64::Q31_Q0) {
+        if (regNo >= AArch64::B0 && regNo <= AArch64::B31) {
+          loadType = IntegerType::get(getGlobalContext(), 8);
+        } else if (regNo >= AArch64::H0 && regNo <= AArch64::H31) {
+          loadType = IntegerType::get(getGlobalContext(), 16);
+        } else if (regNo >= AArch64::S0 && regNo <= AArch64::S31) {
+          loadType = IntegerType::get(getGlobalContext(), 32);
+        } else if (regNo >= AArch64::D0 && regNo <= AArch64::D31) {
+          loadType = IntegerType::get(getGlobalContext(), 64);
+        } else if (regNo >= AArch64::Q0 && regNo <= AArch64::Q31) {
+          loadType = IntegerType::get(getGlobalContext(), 128);
+        } else if (regNo >= AArch64::Q0_Q1 && regNo <= AArch64::Q31_Q0) {
           loadType = IntegerType::get(getGlobalContext(), 256);
         } else if (regNo >= AArch64::Q0_Q1_Q2 && regNo <= AArch64::Q31_Q0_Q1) {
           loadType = IntegerType::get(getGlobalContext(), 384);
@@ -364,7 +374,17 @@
         Type *loadType = nullptr;
 
         unsigned int regNo = CurrentInst->Inst.getOperand(1).getReg();
-        if (regNo >= AArch64::Q0_Q1 && regNo <= AArch64::Q31_Q0) {
+        if (regNo >= AArch64::B0 && regNo <= AArch64::B31) {
+          loadType = IntegerType::get(getGlobalContext(), 8);
+        } else if (regNo >= AArch64::S0 && regNo <= AArch64::S31) {
+          loadType = IntegerType::get(getGlobalContext(), 16);
+        } else if (regNo >= AArch64::S0 && regNo <= AArch64::S31) {
+          loadType = IntegerType::get(getGlobalContext(), 32);
+        } else if (regNo >= AArch64::D0 && regNo <= AArch64::D31) {
+          loadType = IntegerType::get(getGlobalContext(), 64);
+        } else if (regNo >= AArch64::Q0 && regNo <= AArch64::Q31) {
+          loadType = IntegerType::get(getGlobalContext(), 128);
+        } else if (regNo >= AArch64::Q0_Q1 && regNo <= AArch64::Q31_Q0) {
           loadType = IntegerType::get(getGlobalContext(), 256);
         } else if (regNo >= AArch64::Q0_Q1_Q2 && regNo <= AArch64::Q31_Q0_Q1) {
           loadType = IntegerType::get(getGlobalContext(), 384);
@@ -385,8 +405,16 @@
         unsigned int loadRegNo = CurrentInst->Inst.getOperand(0).getReg();
         Value *addr = getReg(loadRegNo);
         Value *loadAddr = Builder->CreateIntToPtr(addr, loadType);
-
         Value *val = Builder->CreateLoad(loadAddr);
+        //errs() << "[+]addr: " << *addr << "\tloadAddr: " << *loadAddr << "\tval: " << *val << "\n";
+        
+        /*
+        unsigned int loadRegNo1 = CurrentInst->Inst.getOperand(2).getReg();
+        Value *addr1 = getReg(loadRegNo1);
+        Value *loadAddr1 = Builder->CreateIntToPtr(addr1, loadType);
+        Value *val1 = Builder->CreateLoad(loadAddr1);
+        errs() << "[+]addr1: " << *addr1 << "\tloadAddr1: " << *loadAddr1 << "\tval1: " << *val1 << "\n";
+        */
         setReg(regNo, val);
 
         unsigned int incrementSize = 0;
@@ -626,9 +654,15 @@
       case AArch64::ST4i64_POST:
       case AArch64::ST4i8_POST:
       {
-        unsigned int dstRegNo = CurrentInst->Inst.getOperand(2).getReg();
-        unsigned int srcRegNo = CurrentInst->Inst.getOperand(0).getReg();
-        unsigned int index = CurrentInst->Inst.getOperand(1).getImm();
+        //WTF, src dst reg?
+        unsigned int dstRegNo = CurrentInst->Inst.getOperand(0).getReg();
+        unsigned int srcRegNo = CurrentInst->Inst.getOperand(1).getReg();
+        unsigned int index = CurrentInst->Inst.getOperand(2).getImm();
+
+
+        //unsigned int dstRegNo = CurrentInst->Inst.getOperand(2).getReg();
+        //unsigned int srcRegNo = CurrentInst->Inst.getOperand(0).getReg();
+        //unsigned int index = CurrentInst->Inst.getOperand(1).getImm();
 
         unsigned int numVectors = 0;
         unsigned int numElements = 0;

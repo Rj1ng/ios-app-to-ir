@@ -56,6 +56,7 @@ AArch64InstrSema::AArch64InstrSema(DCRegisterSema &DRS) :
 bool AArch64InstrSema::translateTargetInst() {
     printInstruction();
     unsigned Opcode = CurrentInst->Inst.getOpcode();
+    //errs() << "[+]CurrentInst->Inst.getOPcode: " << Opcode << "\n";
     switch (Opcode) {
 
       //due to the size of this cases they were moved to a separate file
@@ -69,6 +70,7 @@ bool AArch64InstrSema::translateTargetInst() {
         case AArch64::UBFMWri:
         case AArch64::BFMWri:
         case AArch64::BFMXri:{
+            //errs() << "[-----]UBFM\n";
             int64_t DstRegNo = 0;
             Value *Src = NULL;
             int64_t Rotate = NULL;
@@ -122,11 +124,13 @@ bool AArch64InstrSema::translateTargetInst() {
                 }
             }
 
+
             setReg(DstRegNo, Result);
             return true;
         }
         case AArch64::MOVKXi:
         case AArch64::MOVKWi: {
+            //errs() << "[-----]MOVK\n";
             uint64_t DstRegNo = CurrentInst->Inst.getOperand(0).getReg();
             Value *Src = getReg(CurrentInst->Inst.getOperand(1).getReg());
             int64_t Imm = CurrentInst->Inst.getOperand(2).getImm();
@@ -135,11 +139,13 @@ bool AArch64InstrSema::translateTargetInst() {
             Imm = Imm << Shift;
             Value *Val = Builder->CreateAnd(Src, Mask);
             Val = Builder->CreateOr(Src, Imm);
+            
             setReg(DstRegNo, Val);
             return true;
         }
         case AArch64::SBFMWri:
         case AArch64::SBFMXri: {
+            //errs() << "[-----]SBFM\n";
             int64_t DstRegNo = CurrentInst->Inst.getOperand(0).getReg();
             Value *Src = getReg(CurrentInst->Inst.getOperand(1).getReg());
             int64_t Rotate = CurrentInst->Inst.getOperand(2).getImm();
@@ -160,22 +166,26 @@ bool AArch64InstrSema::translateTargetInst() {
                 Src = Builder->CreateSExt(Src, Builder->getIntNTy(Width));
                 Src = Builder->CreateShl(Src, Src->getType()->getIntegerBitWidth() - Rotate);
             }
-
+            
             setReg(DstRegNo, Src);
 
             return true;
         }
         case AArch64::FADDPv2i32p: {
+            //errs() << "[-----]FADDPv2i32p\n";
             Value *srcReg = getReg(CurrentInst->Inst.getOperand(1).getReg());
             srcReg = Builder->CreateBitCast(srcReg, VectorType::get(Builder->getFloatTy(), 2));
             Value *res = Builder->CreateFAdd(Builder->CreateExtractElement(srcReg, (uint64_t)0), Builder->CreateExtractElement(srcReg, 1));
+            
             setReg(CurrentInst->Inst.getOperand(0).getReg(), Builder->CreateBitCast(res, Builder->getInt32Ty()));
             return true;
         }
         case AArch64::FADDPv2i64p: {
+            //errs() << "[-----]FADDPv2i64p\n";
             Value *srcReg = getReg(CurrentInst->Inst.getOperand(1).getReg());
             srcReg = Builder->CreateBitCast(srcReg, VectorType::get(Builder->getDoubleTy(), 2));
             Value *res = Builder->CreateFAdd(Builder->CreateExtractElement(srcReg, (uint64_t)0), Builder->CreateExtractElement(srcReg, 1));
+            
             setReg(CurrentInst->Inst.getOperand(0).getReg(), Builder->CreateBitCast(res, Builder->getInt64Ty()));
             return true;
         }
@@ -221,6 +231,7 @@ bool AArch64InstrSema::translateTargetInst() {
         case AArch64::FCVTNv4i16:
         case AArch64::FCVTNv4i32:
         case AArch64::FCVTNv8i16: {
+            //errs() << "[-----]FCVTNv\n";
             uint64_t DstRegNo = CurrentInst->Inst.getOperand(0).getReg();
             Value *Src = getReg(CurrentInst->Inst.getOperand(1).getReg());
             Value *Dst = getReg(DstRegNo);
@@ -275,11 +286,6 @@ void AArch64InstrSema::translateCustomOperand(unsigned OperandType, unsigned MIO
             llvm_unreachable("");
             break;
         }
-        case AArch64::OpTypes::ADDSanonymous_755: {
-            DEBUG(errs() << "Operand:ADDSanonymous_755\n");
-            llvm_unreachable("Operand not implemented");
-            break;
-        }
         case AArch64::OpTypes::SUBanonymous_745:
         //arith_extended_reg32
         case AArch64::OpTypes::ADDanonymous_745:
@@ -316,6 +322,7 @@ void AArch64InstrSema::translateCustomOperand(unsigned OperandType, unsigned MIO
         //arith_extended_reg32
         case AArch64::OpTypes::SUBSanonymous_755:
         case AArch64::OpTypes::SUBSanonymous_756:
+        case AArch64::OpTypes::ADDSanonymous_755:
         case AArch64::OpTypes::ADDSanonymous_756:{
             DEBUG(errs() << "Operand:SUBSanonymous_755\n");
             Value *Reg = getReg(getRegOp(MIOperandNo));
@@ -337,6 +344,12 @@ void AArch64InstrSema::translateCustomOperand(unsigned OperandType, unsigned MIO
                 case AArch64::OpTypes::SUBSanonymous_756: {
                     DEBUG(errs() << "Operand:SUBSanonymous_756\n");
                     ExtType = Builder->getInt64Ty();
+                    break;
+                }
+                //BugID: vlc_0x100DFAB6C
+                case AArch64::OpTypes::ADDSanonymous_755: {
+                    DEBUG(errs() << "Operand:ADDSanonymous_755\n");
+                    ExtType = Builder->getInt32Ty();
                     break;
                 }
                 case AArch64::OpTypes::ADDSanonymous_756: {
@@ -1993,7 +2006,27 @@ void AArch64InstrSema::translateTargetOpcode() {
         }
         case AArch64ISD::REV16: {
             DEBUG(errs() << "ISD: REV16\n");
-            llvm_unreachable("Not implemented");
+            //llvm_unreachable("Not implemented");
+            //BugID: vlc_0x100C6D7D0
+            Value *in = getNextOperand();
+            in = Builder->CreateBitCast(in, VectorType::get(Builder->getInt16Ty(), ResEVT.getSizeInBits() / 16));
+
+            Value *result = Builder->getInt(APInt(ResEVT.getSizeInBits(), 0));
+            result = Builder->CreateBitCast(result, VectorType::get(Builder->getInt16Ty(), ResEVT.getSizeInBits() / 16));
+
+            std::vector<Type*> types;
+            types.push_back(Builder->getInt16Ty());
+
+            Function *intr = Intrinsic::getDeclaration(TheModule, Intrinsic::aarch64_rbit, types);
+
+            for (unsigned i = 0; i < ResEVT.getSizeInBits() / 2; ++i) {
+                std::vector<Value*> args;
+                args.push_back(Builder->CreateExtractElement(in, i));
+                Value *rev = Builder->CreateCall(intr, args);
+                result = Builder->CreateInsertElement(result, rev, i);
+            }
+            result = Builder->CreateBitCast(result, ResEVT.getTypeForEVT(*Ctx));
+            registerResult(result);
             break;
         }
         case AArch64ISD::REV32: {
@@ -2076,7 +2109,15 @@ void AArch64InstrSema::translateTargetOpcode() {
         }
         case AArch64ISD::VASHR: {
             DEBUG(errs() << "ISD: VASHR\n");
-            assert(ResEVT.getSimpleVT().isVector());
+            //assert(ResEVT.getSimpleVT().isVector());
+            if (!ResEVT.getSimpleVT().isVector()) {
+                Value *Vector = getNextOperand();
+                Value *SHRVal = getNextOperand();
+                uint64_t SHR = cast<ConstantInt>(SHRVal)->getValue().getZExtValue();
+                Vector = Builder->CreateAShr(Vector, SHR);
+                registerResult(Vector);
+                break;
+            }
             Value *op = getNextOperand();
             ConstantInt *shift = dyn_cast<ConstantInt>(getNextOperand());
             assert(shift);
@@ -2114,6 +2155,12 @@ void AArch64InstrSema::translateTargetOpcode() {
             Value *result = Builder->getInt(APInt(ResEVT.getSimpleVT().getSizeInBits(), 0));
             result = Builder->CreateBitCast(result, op1->getType());
 
+            if (!ResEVT.getSimpleVT().isVector()) {
+                Value *result = Builder->CreateAShr(op1, shift->getZExtValue());
+                registerResult(result);
+                break;
+            }
+
             for (unsigned i = 0; i < ResEVT.getSimpleVT().getVectorNumElements(); ++i) {
                 Value *elem = Builder->CreateExtractElement(op1, i);
                 elem = Builder->CreateAShr(elem, shift->getZExtValue());
@@ -2124,9 +2171,30 @@ void AArch64InstrSema::translateTargetOpcode() {
 
             break;
         }
+        //BugID: vlc_100C6C330
         case AArch64ISD::URSHR_I: {
             DEBUG(errs() << "ISD: URSHR_I\n");
-            llvm_unreachable("Not implemented");
+            //llvm_unreachable("Not implemented");
+            Value *op1 = getNextOperand();
+            ConstantInt *shift = dyn_cast<ConstantInt>(getNextOperand());
+            assert(shift);
+
+            Value *result = Builder->getInt(APInt(ResEVT.getSimpleVT().getSizeInBits(), 0));
+            result = Builder->CreateBitCast(result, op1->getType());
+
+            if (!ResEVT.getSimpleVT().isVector()) {
+                Value *result = Builder->CreateAShr(op1, shift->getZExtValue());
+                registerResult(result);
+                break;
+            }
+
+            for (unsigned i = 0; i < ResEVT.getSimpleVT().getVectorNumElements(); ++i) {
+                Value *elem = Builder->CreateExtractElement(op1, i);
+                elem = Builder->CreateAShr(elem, shift->getZExtValue());
+                result = Builder->CreateInsertElement(result, elem, i);
+            }
+
+            registerResult(result);
             break;
         }
         case AArch64ISD::CMEQ: {
@@ -2153,7 +2221,26 @@ void AArch64InstrSema::translateTargetOpcode() {
         }
         case AArch64ISD::CMGE: {
             DEBUG(errs() << "ISD: CMGE\n");
-            llvm_unreachable("Not implemented");
+            //llvm_unreachable("Not implemented");
+            MVT SVT = ResEVT.getSimpleVT();
+
+            Value *Vector1 = getNextOperand();
+            Value *Vector2 = getNextOperand();
+
+            Value *ResultVector = Builder->getInt(APInt(SVT.getVectorNumElements() * SVT.getScalarSizeInBits(), 0));
+            ResultVector = Builder->CreateBitCast(ResultVector, VectorType::get(IntegerType::get(*Ctx, SVT.getScalarSizeInBits()), SVT.getVectorNumElements()));
+
+            Value *OneMask = Builder->getInt(APInt(SVT.getScalarSizeInBits(), -1U));
+            Value *ZeroMask = Builder->getInt(APInt(SVT.getScalarSizeInBits(), 0));
+            for (unsigned i = 0; i < SVT.getVectorNumElements(); ++i) {
+                Value *E1 = Builder->CreateExtractElement(Vector1, i);
+                Value *E2 = Builder->CreateExtractElement(Vector2, i);
+
+                Value *NewElem = Builder->CreateSelect(Builder->CreateICmpSGE(E1, E2), OneMask, ZeroMask);
+                ResultVector = Builder->CreateInsertElement(ResultVector, NewElem, i);
+            }
+
+            registerResult(ResultVector);
             break;
         }
         case AArch64ISD::CMGT: {
@@ -2177,7 +2264,6 @@ void AArch64InstrSema::translateTargetOpcode() {
             }
 
             registerResult(ResultVector);
-            break;
             break;
         }
         case AArch64ISD::CMHI: {
@@ -2342,12 +2428,46 @@ void AArch64InstrSema::translateTargetOpcode() {
         }
         case AArch64ISD::CMGEz: {
             DEBUG(errs() << "ISD: CMGEz\n");
-            llvm_unreachable("Not implemented");
+            //llvm_unreachable("Not implemented");
+            assert(ResEVT.getSimpleVT().isVector());
+
+            Value *vector1 = getNextOperand();
+
+            uint64_t ones = getOnes(ResEVT.getSimpleVT().getVectorElementType().getSizeInBits());
+
+            Value *Result = UndefValue::get(VectorType::get(IntegerType::get(*Ctx, ResEVT.getVectorElementType().getSizeInBits()), ResEVT.getVectorNumElements()));
+
+            for (unsigned i = 0; i < ResEVT.getSimpleVT().getVectorNumElements(); ++ i) {
+                Value *elem1 = Builder->CreateExtractElement(vector1, i);
+                Value *elem2 = Builder->getInt(APInt(ResEVT.getVectorElementType().getSizeInBits(), 0));
+                Value *cmp = Builder->CreateICmpSGE(elem1, elem2);
+
+                Value *v = Builder->CreateSelect(cmp, Builder->getInt(APInt(ResEVT.getVectorElementType().getSizeInBits(), ones)), Builder->getInt(APInt(ResEVT.getVectorElementType().getSizeInBits(), 0)));
+                Builder->CreateInsertElement(Result, v, i);
+            }
+            registerResult(Result);
             break;
         }
         case AArch64ISD::CMGTz: {
             DEBUG(errs() << "ISD: CMGTz\n");
-            llvm_unreachable("Not implemented");
+            //llvm_unreachable("Not implemented");
+            assert(ResEVT.getSimpleVT().isVector());
+
+            Value *vector1 = getNextOperand();
+
+            uint64_t ones = getOnes(ResEVT.getSimpleVT().getVectorElementType().getSizeInBits());
+
+            Value *Result = UndefValue::get(VectorType::get(IntegerType::get(*Ctx, ResEVT.getVectorElementType().getSizeInBits()), ResEVT.getVectorNumElements()));
+
+            for (unsigned i = 0; i < ResEVT.getSimpleVT().getVectorNumElements(); ++ i) {
+                Value *elem1 = Builder->CreateExtractElement(vector1, i);
+                Value *elem2 = Builder->getInt(APInt(ResEVT.getVectorElementType().getSizeInBits(), 0));
+                Value *cmp = Builder->CreateICmpSGT(elem1, elem2);
+
+                Value *v = Builder->CreateSelect(cmp, Builder->getInt(APInt(ResEVT.getVectorElementType().getSizeInBits(), ones)), Builder->getInt(APInt(ResEVT.getVectorElementType().getSizeInBits(), 0)));
+                Builder->CreateInsertElement(Result, v, i);
+            }
+            registerResult(Result);
             break;
         }
         case AArch64ISD::CMLEz: {
@@ -2424,7 +2544,26 @@ void AArch64InstrSema::translateTargetOpcode() {
         }
         case AArch64ISD::NOT: {
             DEBUG(errs() << "ISD: NOT\n");
-            llvm_unreachable("Not implemented");
+            assert(ResEVT.getSimpleVT().isVector());
+
+            Value *vector1 = getNextOperand();
+            
+            //vector1 = Builder->CreateNeg(vector1);
+            
+            uint64_t ones = getOnes(ResEVT.getSimpleVT().getVectorElementType().getSizeInBits());
+
+            Value *Result = UndefValue::get(VectorType::get(IntegerType::get(*Ctx, ResEVT.getVectorElementType().getSizeInBits()), ResEVT.getVectorNumElements()));
+            for (unsigned i = 0; i < ResEVT.getSimpleVT().getVectorNumElements(); ++i) {
+                Value *elem1 = Builder->CreateExtractElement(vector1, i);
+                Value *elem2 = Builder->getInt(APInt(ResEVT.getVectorElementType().getSizeInBits(), -1));
+                Value *neg = Builder->CreateNeg(elem1);
+
+                Builder->CreateInsertElement(Result, neg, i);
+            }
+
+            registerResult(Result);
+            //llvm_unreachable("Not implemented");
+
             break;
         }
         case AArch64ISD::BIT: {
@@ -2569,7 +2708,7 @@ void AArch64InstrSema::translateTargetOpcode() {
             DEBUG(errs() << "ISD: LD1x4post\n");
             llvm_unreachable("Not implemented");
             break;
-        }
+        } 
         case AArch64ISD::ST1x2post: {
             DEBUG(errs() << "ISD: ST1x2post\n");
             llvm_unreachable("Not implemented");
@@ -2682,6 +2821,7 @@ void AArch64InstrSema::translateTargetOpcode() {
 }
 
 void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
+    errs() << "[+]switch: " << IntrinsicID <<"\n";
     switch (IntrinsicID) {
         default:
             llvm_unreachable("intrinsic not handled");
@@ -2719,15 +2859,26 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
         }
         case Intrinsic::aarch64_neon_vcvtfp2fxs: {
             Value *op1 = getNextOperand();
+            //op1->dump();
             Value *op2 = getNextOperand();
+            //BUGID: 100B1E8C4
+           //try to fix int32 int64 type error 
+            op2 = Builder->CreateIntCast(op2, Builder->getInt32Ty(), true);
+            //op2->dump();
+
             std::vector<Value*> args;
             args.push_back(op1);
             args.push_back(op2);
 
             std::vector<Type*> types;
-            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            types.push_back(op2->getType());
+            //types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
             types.push_back(op1->getType());
-
+            
+            //ResEVT.getTypeForEVT(getGlobalContext())->dump();
+            //op1->getType()->dump();
+            //op2->getType()->dump();
+            
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
             break;
@@ -2785,7 +2936,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             std::vector<Type*> types;
             types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
             types.push_back(op->getType());
-
+            
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
             break;
@@ -2825,6 +2976,8 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
         }
         case Intrinsic::aarch64_neon_ushl:
         case Intrinsic::aarch64_neon_sshl:
+        //BugID: vlc_100C6C104
+        case Intrinsic::aarch64_neon_sqshl:
         {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
@@ -2856,10 +3009,44 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             break;
         }
         case Intrinsic::aarch64_neon_sqdmulh:
+        case Intrinsic::aarch64_neon_sqrdmulh:
         case Intrinsic::aarch64_neon_sqadd:
         case Intrinsic::aarch64_neon_sqsub:
         case Intrinsic::aarch64_neon_uqadd:
         case Intrinsic::aarch64_neon_uqsub:
+        {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(op1->getType());
+            types.push_back(op2->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
+            break;
+        }
+        //BugID: vlc_100C58700
+        case Intrinsic::aarch64_neon_subhn:
+        {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+
+            registerResult(result);
+            
+            break;
+        }
+        case Intrinsic::aarch64_neon_suqadd:
         {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
@@ -2933,6 +3120,27 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             break;
         }
+        //BugID: vlc_100C5447C
+        case Intrinsic::aarch64_neon_sqshrun:
+        {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            types.push_back(op2->getType());
+
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            Value *result = Builder->CreateCall(intrinsic, args);
+            registerResult(result);
+
+            break;
+        }
         case Intrinsic::aarch64_neon_uaddlp:
         {
             Value *op = getNextOperand();
@@ -2948,6 +3156,38 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             Value *result = Builder->CreateCall(intrinsic, args);
             registerResult(result);
+            break;
+        }
+        case Intrinsic::aarch64_neon_addhn:
+        {
+            /*
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+
+            std::vector<Type*> types;
+            types.push_back(op1->getType());
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+            
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+            Value *result = Builder->CreateCall(intrinsic, args);
+            */
+            
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+
+            registerResult(result);
+            
             break;
         }
         case Intrinsic::aarch64_neon_addp:
