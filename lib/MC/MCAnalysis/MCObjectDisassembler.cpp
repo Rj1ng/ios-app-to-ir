@@ -328,9 +328,12 @@ void MCObjectDisassembler::disassembleFunctionAt(
     } else {
       // If we didn't find a BB, then we have to disassemble to create one!
       const MemoryRegion &Region = getRegionFor(BeginAddr);
-      if (Region.Bytes.empty())
-        report_fatal_error(("No suitable region for disassembly at 0x" +
-                            utohexstr(BeginAddr)).c_str());
+      if (Region.Bytes.empty()) {
+        //report_fatal_error(("No suitable region for disassembly at 0x" +
+        errs() << "No suitable region for disassembly at 0x" <<
+                            utohexstr(BeginAddr).c_str() << "\n";
+        continue;
+      }
       const uint64_t EndRegion = Region.Addr + Region.Bytes.size();
 
       uint64_t EndAddr = EndRegion;

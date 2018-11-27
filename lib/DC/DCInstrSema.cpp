@@ -787,6 +787,8 @@ void DCInstrSema::translateOpcode(unsigned Opcode) {
       }
       break;
   }
+  //BugID: koubei_100745578
+  case ISD::SABSDIFF:
   case ISD::UABSDIFF: {
       if (ResEVT.getSimpleVT().isVector()) {
           Value *zero = Builder->getInt(APInt(ResEVT.getVectorElementType().getSizeInBits(), 0));

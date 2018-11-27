@@ -29,7 +29,45 @@ Stack dump:
 ```
 
 aarch64 decode failed
-status: unsolved
+status: solved?
+
+---
+
+```text
+BugID: tzhuaTai_100C2C8B4
+100C2C8B4                 FRECPE          V2.4S, V1.4S
+ <MCInst 675 <MCOperand Reg:106> <MCOperand Reg:105>> at 0x100C2C8B4
+[+]switch: 74
+intrinsic not handled
+UNREACHABLE executed at /Users/ring/Documents/pwnzen/Project-ios/ios-app-to-ir/lib/Target/AArch64/DC/AArch64InstrSema.cpp:2827!
+status: unsure
+
+BugID: tzhuaTai_100C2C8B8
+100C2C8B8                 FRECPS          V1.4S, V1.4S, V2.4S
+ <MCInst 680 <MCOperand Reg:105> <MCOperand Reg:105> <MCOperand Reg:106>> at 0x100C2C8B8
+[+]switch: 75
+intrinsic not handled
+status: unsure
+
+BugID: tzhuaTai_100C392A4
+100C392A4                 FMAXP           V0.2S, V0.2S, V2.2S
+ <MCInst 575 <MCOperand Reg:40> <MCOperand Reg:40> <MCOperand Reg:42>> at 0x100C392A4
+[+]switch: 65
+intrinsic not handled
+status: unsure
+
+BugID: tzhuaTai_1012FBF28
+1012FBF28                 UQSHRN          V0.8B, V3.8H, #8
+ <MCInst 2443 <MCOperand Reg:40> <MCOperand Reg:107> <MCOperand Imm:8>> at 0x1012FBF28
+[+]switch: 173
+intrinsic not handled
+
+BugID: tzhuaTai_1012FC820
+1012FC820                 UQRSHRN         V0.8B, V16.8H, #2
+ <MCInst 2412 <MCOperand Reg:40> <MCOperand Reg:120> <MCOperand Imm:2>> at 0x1012FC820
+[+]switch: 171
+intrinsic not handled
+```
 
 ## vlc
 
@@ -315,6 +353,7 @@ Can't convert int:
 
 ## koubei
 
+```text
 0: OPC_ExtractField(26, 3): 5
 3: OPC_FilterValue(2, 1582): FAIL: continuing at 1589
 1589: OPC_FilterValue(3, 28707): FAIL: continuing at 30300
@@ -334,4 +373,42 @@ Looking for block at 1076ECE10
 LLVM ERROR: No suitable region for disassembly at 0x1076ECE10
 
 MCObjectDisassembler::disassembleFunctionAt failed, No suitable region for disassembly at 0x1076ECE10
-status: unsolved
+
+status: unsolved, continue
+```
+
+---
+
+```text
+BugID: koubei_1003D3150
+1003D3150                 UHSUB           V26.16B, V26.16B, V22.16B
+ <MCInst 2305 <MCOperand Reg:130> <MCOperand Reg:130> <MCOperand Reg:126>> at 0x1003D3150
+[+]switch: 161
+intrinsic not handled
+
+* status: unsure
+```
+
+---
+
+```text
+BugID: koubei_10073EAB0
+10073EAB0                 SQDMULL         V25.2D, V26.2S, V26.S[3]
+ <MCInst 1642 <MCOperand Reg:129> <MCOperand Reg:66> <MCOperand Reg:130> <MCOperand Imm:3>> at 0x10073EAB0
+[+]switch: 119
+intrinsic not handled
+
+status: unsure
+```
+
+---
+
+```text
+BugID: koubei_100745578
+100745578                 SABDL2          V5.2D, V16.4S, V31.4S
+ <MCInst 1391 <MCOperand Reg:109> <MCOperand Reg:120> <MCOperand Reg:135>> at 0x100745578
+Unknown opcode found in semantics: 107
+
+```
+
+## df
