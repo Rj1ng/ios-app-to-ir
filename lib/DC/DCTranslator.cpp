@@ -316,7 +316,7 @@ void DCTranslator::translateFunction(
                  << " instructions.\n");
     DIS.SwitchToBasicBlock(BB);
     for (auto &I : *BB) {
-      (dbgs() << "Translating instruction:\n " << I.Inst << " at 0x" << utohexstr(I.Address) << "\n");
+      //(dbgs() << "Translating instruction:\n " << I.Inst << " at 0x" << utohexstr(I.Address) << "\n");
       DCTranslatedInst TI(I);
       if (!DIS.translateInst(I, TI)) {
         errs() << "Cannot translate instruction: \n  ";

@@ -408,7 +408,16 @@ BugID: koubei_100745578
 100745578                 SABDL2          V5.2D, V16.4S, V31.4S
  <MCInst 1391 <MCOperand Reg:109> <MCOperand Reg:120> <MCOperand Reg:135>> at 0x100745578
 Unknown opcode found in semantics: 107
+status: unsure
+```
 
+---
+
+```text
+BugID: koubei_100BF4608
+100BF4608                 UQSHL           V4.8B, V4.8B, #1
+ <MCInst 2434 <MCOperand Reg:44> <MCOperand Reg:44> <MCOperand Imm:1>> at 0x100BF4608
+Not implemented
 ```
 
 ## df

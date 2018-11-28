@@ -2136,9 +2136,32 @@ void AArch64InstrSema::translateTargetOpcode() {
             llvm_unreachable("Not implemented");
             break;
         }
+        //BugID: koubei_100BF4608
         case AArch64ISD::UQSHL_I: {
             DEBUG(errs() << "ISD: UQSHL_I\n");
-            llvm_unreachable("Not implemented");
+            //llvm_unreachable("Not implemented");
+            Value *op1 = getNextOperand();
+            ConstantInt *shift = dyn_cast<ConstantInt>(getNextOperand());
+            assert(shift);
+
+            Value *result = Builder->getInt(APInt(ResEVT.getSimpleVT().getSizeInBits(), 0));
+            result = Builder->CreateBitCast(result, op1->getType());
+
+            if (!ResEVT.getSimpleVT().isVector()) {
+                Value *result = Builder->CreateShl(op1, shift->getZExtValue());
+                registerResult(result);
+                break;
+            }
+
+            for (unsigned i = 0; i < ResEVT.getSimpleVT().getVectorNumElements(); ++i) {
+                Value *elem = Builder->CreateExtractElement(op1, i);
+                elem = Builder->CreateShl(elem, shift->getZExtValue());
+                result = Builder->CreateInsertElement(result, elem, i);
+            }
+
+            registerResult(result);
+
+            break;
             break;
         }
         case AArch64ISD::SQSHLU_I: {
