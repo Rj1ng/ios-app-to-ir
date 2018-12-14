@@ -56,7 +56,8 @@ AArch64InstrSema::AArch64InstrSema(DCRegisterSema &DRS) :
 bool AArch64InstrSema::translateTargetInst() {
     printInstruction();
     unsigned Opcode = CurrentInst->Inst.getOpcode();
-    //errs() << "[+]CurrentInst->Inst.getOPcode: " << Opcode << "\n";
+    //errs() << "[+]CurrentInst->Inst: " << "\n";
+
     switch (Opcode) {
 
       //due to the size of this cases they were moved to a separate file
@@ -266,6 +267,7 @@ bool AArch64InstrSema::translateTargetInst() {
         case AArch64::SQXTNv8i16:
         case AArch64::UQXTNv8i16:
         {
+
             return true;
         }
     }
@@ -2131,11 +2133,8 @@ void AArch64InstrSema::translateTargetOpcode() {
             registerResult(result);
             break;
         }
-        case AArch64ISD::SQSHL_I: {
-            DEBUG(errs() << "ISD: SQSHL_I\n");
-            llvm_unreachable("Not implemented");
-            break;
-        }
+        //modified
+        case AArch64ISD::SQSHL_I: 
         //BugID: koubei_100BF4608
         case AArch64ISD::UQSHL_I: {
             DEBUG(errs() << "ISD: UQSHL_I\n");
@@ -2164,9 +2163,30 @@ void AArch64InstrSema::translateTargetOpcode() {
             break;
             break;
         }
+        //modified
         case AArch64ISD::SQSHLU_I: {
             DEBUG(errs() << "ISD: SQSHLU_I\n");
-            llvm_unreachable("Not implemented");
+            //llvm_unreachable("Not implemented");
+            Value *op1 = getNextOperand();
+            ConstantInt *shift = dyn_cast<ConstantInt>(getNextOperand());
+            assert(shift);
+
+            Value *result = Builder->getInt(APInt(ResEVT.getSimpleVT().getSizeInBits(), 0));
+            result = Builder->CreateBitCast(result, op1->getType());
+
+            if (!ResEVT.getSimpleVT().isVector()) {
+                Value *result = Builder->CreateShl(op1, shift->getZExtValue());
+                registerResult(result);
+                break;
+            }
+
+            for (unsigned i = 0; i < ResEVT.getSimpleVT().getVectorNumElements(); ++i) {
+                Value *elem = Builder->CreateExtractElement(op1, i);
+                elem = Builder->CreateShl(elem, shift->getZExtValue());
+                result = Builder->CreateInsertElement(result, elem, i);
+            }
+
+            registerResult(result);
             break;
         }
         case AArch64ISD::SRSHR_I: {
@@ -2197,7 +2217,6 @@ void AArch64InstrSema::translateTargetOpcode() {
         //BugID: vlc_100C6C330
         case AArch64ISD::URSHR_I: {
             DEBUG(errs() << "ISD: URSHR_I\n");
-            //llvm_unreachable("Not implemented");
             Value *op1 = getNextOperand();
             ConstantInt *shift = dyn_cast<ConstantInt>(getNextOperand());
             assert(shift);
@@ -2206,14 +2225,14 @@ void AArch64InstrSema::translateTargetOpcode() {
             result = Builder->CreateBitCast(result, op1->getType());
 
             if (!ResEVT.getSimpleVT().isVector()) {
-                Value *result = Builder->CreateAShr(op1, shift->getZExtValue());
+                Value *result = Builder->CreateLShr(op1, shift->getZExtValue());
                 registerResult(result);
                 break;
             }
 
             for (unsigned i = 0; i < ResEVT.getSimpleVT().getVectorNumElements(); ++i) {
                 Value *elem = Builder->CreateExtractElement(op1, i);
-                elem = Builder->CreateAShr(elem, shift->getZExtValue());
+                elem = Builder->CreateLShr(elem, shift->getZExtValue());
                 result = Builder->CreateInsertElement(result, elem, i);
             }
 
@@ -2244,7 +2263,6 @@ void AArch64InstrSema::translateTargetOpcode() {
         }
         case AArch64ISD::CMGE: {
             DEBUG(errs() << "ISD: CMGE\n");
-            //llvm_unreachable("Not implemented");
             MVT SVT = ResEVT.getSimpleVT();
 
             Value *Vector1 = getNextOperand();
@@ -2865,6 +2883,24 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
+        //BugID: welink_1003F3FD4
+        case Intrinsic::aarch64_neon_smaxp: {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(op1->getType());
+            types.push_back(op2->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
+
+            break;
+        }
         //BugID: koubei_1003D3150
         case Intrinsic::aarch64_neon_uhsub:{
             Value *op1 = getNextOperand();
@@ -2970,6 +3006,20 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
+        //BugID: welink_1003F26A4
+        case Intrinsic::aarch64_neon_cls: {
+            Value *op = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op);
+
+            std::vector<Type*> types;
+            types.push_back(op->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
+            
+            break;
+        }
         case Intrinsic::aarch64_neon_fcvtas:
         case Intrinsic::aarch64_neon_fcvtau:
         case Intrinsic::aarch64_neon_fcvtms:
@@ -3009,6 +3059,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
         }
         case Intrinsic::aarch64_neon_sqxtn:
         case Intrinsic::aarch64_neon_sqxtun:
+        case Intrinsic::aarch64_neon_sqabs:
         case Intrinsic::aarch64_neon_abs:
         {
             Value *op = getNextOperand();
@@ -3044,6 +3095,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
+        case Intrinsic::aarch64_neon_srhadd:
         case Intrinsic::aarch64_neon_urhadd:
         case Intrinsic::aarch64_neon_uhadd:
         {
@@ -3063,9 +3115,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
         //BugID: koubei_10073EAB0
         case Intrinsic::aarch64_neon_sqdmull: {
             Value *op1 = getNextOperand();
-            //op1->dump();
             Value *op2 = getNextOperand();
-            //op2->dump();
             
             std::vector<Value*> args;
             args.push_back(op1);
@@ -3080,9 +3130,10 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
+        //
         case Intrinsic::aarch64_neon_sqdmulh:
         case Intrinsic::aarch64_neon_sqrdmulh:
-        case Intrinsic::aarch64_neon_sqadd:
+        case Intrinsic::aarch64_neon_sqadd:        
         case Intrinsic::aarch64_neon_sqsub:
         case Intrinsic::aarch64_neon_uqadd:
         case Intrinsic::aarch64_neon_uqsub:
@@ -3095,7 +3146,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             std::vector<Type*> types;
             types.push_back(op1->getType());
-            types.push_back(op2->getType());
+            //types.push_back(op2->getType());
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
@@ -3172,14 +3223,16 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             break;
         }
+        //
         case Intrinsic::aarch64_neon_sqshrn:
         {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
 
             std::vector<Type*> types;
-            types.push_back(ResEVT.getTypeForEVT(*Ctx));
-            types.push_back(op2->getType());
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            //types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            //types.push_back(op2->getType());
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
 
@@ -3199,8 +3252,9 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             Value *op2 = getNextOperand();
 
             std::vector<Type*> types;
-            types.push_back(ResEVT.getTypeForEVT(*Ctx));
-            types.push_back(op2->getType());
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            //types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            //types.push_back(op2->getType());
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
 
@@ -3220,8 +3274,9 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             Value *op2 = getNextOperand();
 
             std::vector<Type*> types;
-            types.push_back(ResEVT.getTypeForEVT(*Ctx));
-            types.push_back(op2->getType());
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            //types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            //types.push_back(op2->getType());
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
 
@@ -3241,7 +3296,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             args.push_back(op);
 
             std::vector<Type*> types;
-//                  types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            //types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));            
             types.push_back(ResEVT.getTypeForEVT(*Ctx));
             types.push_back(op->getType());
 
@@ -3304,13 +3359,28 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             break;
         }
         case Intrinsic::aarch64_neon_saddlp:
+        {
+            Value *op = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op);
+
+            std::vector<Type*> types;
+            //types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));            
+            types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            types.push_back(op->getType());
+
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+
+            Value *result = Builder->CreateCall(intrinsic, args);
+            registerResult(result);
+            break;
+        }
         case Intrinsic::aarch64_neon_uqxtn:
         {
             Value *op = getNextOperand();
 
             std::vector<Type*> types;
             types.push_back(ResEVT.getTypeForEVT(*Ctx));
-            types.push_back(op->getType());
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
 

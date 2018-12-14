@@ -511,6 +511,11 @@ std::string Intrinsic::getName(ID id, ArrayRef<Type*> Tys) {
   for (unsigned i = 0; i < Tys.size(); ++i) {
     Result += "." + getMangledTypeStr(Tys[i]);
   }
+  
+  if (Tys.size() == 2) {
+    errs() << "[+]Result: " << Result << "\n";
+  }
+  
   return Result;
 }
 
