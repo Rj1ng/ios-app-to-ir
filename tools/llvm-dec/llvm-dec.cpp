@@ -108,6 +108,7 @@ static const Target *getTarget(const ObjectFile *Obj) {
 }
 
 int main(int argc, char **argv) {
+    //git
   sys::PrintStackTraceOnErrorSignal();
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;
