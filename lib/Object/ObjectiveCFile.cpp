@@ -68,7 +68,7 @@ void ObjectiveCFile::resolveMethods() {
     assert(ObjcConstAddress && ObjcConstData.size());
     assert(ObjcClassnamesAddress && ObjcClassnamesData.size());
     assert(ObjcMethodnamesAddress && ObjcMethodnamesData.size());
-    assert(ObjcCatlistAddress && ObjcCatlistData.size());
+    //assert(ObjcCatlistAddress && ObjcCatlistData.size());
 
     for (unsigned ClasslistIdx = 0; ClasslistIdx < ObjcClasslistData.size(); ClasslistIdx += sizeof(uint64_t)) {
         uint64_t ClassRef = *((uint64_t*)ObjcClasslistData.slice(ClasslistIdx).data());
@@ -115,24 +115,25 @@ void ObjectiveCFile::resolveMethods() {
             }
         }
     }
+    if (ObjcCatlistData.size()) {
+        for (unsigned CatlistIdx = 0; CatlistIdx < ObjcCatlistData.size(); CatlistIdx += sizeof(uint64_t)) {
+            uint64_t CatRef = *((uint64_t*)ObjcCatlistData.slice(CatlistIdx).data());
 
-    for (unsigned CatlistIdx = 0; CatlistIdx < ObjcCatlistData.size(); CatlistIdx += sizeof(uint64_t)) {
-        uint64_t CatRef = *((uint64_t*)ObjcCatlistData.slice(CatlistIdx).data());
+            assert(ObjcConstAddress <= CatRef && CatRef <= ObjcConstAddress + ObjcConstData.size());
 
-        assert(ObjcConstAddress <= CatRef && CatRef <= ObjcConstAddress + ObjcConstData.size());
-
-        ObjcCatInfoStruct_t *catInfo = (ObjcCatInfoStruct_t*)ObjcConstData.slice(CatRef - ObjcConstAddress).data();
-        ObjcDataStruct_t *ClassData = nullptr;
-        ObjcClassInfoStruct_t *ClassInfo = nullptr;
-        bool isSwiftClass = false;
-        if (catInfo->Class) {
-            ClassData = (ObjcDataStruct_t *) ObjcDataData.slice(catInfo->Class - ObjcDataAddress).data();
-            //try to fix ClassInfo address error(isSwift)
-            DEBUG(errs() << "[+] Castlist ClassData->Data address: " << utohexstr(ClassData->Data) << "\n");
-            isSwiftClass = (bool)(ClassData->Data & 1);
-            ClassInfo = (ObjcClassInfoStruct_t*)ObjcConstData.slice(ClassData->Data  -  ObjcConstAddress, isSwiftClass, true).data();
+            ObjcCatInfoStruct_t *catInfo = (ObjcCatInfoStruct_t*)ObjcConstData.slice(CatRef - ObjcConstAddress).data();
+            ObjcDataStruct_t *ClassData = nullptr;
+            ObjcClassInfoStruct_t *ClassInfo = nullptr;
+            bool isSwiftClass = false;
+            if (catInfo->Class) {
+                ClassData = (ObjcDataStruct_t *) ObjcDataData.slice(catInfo->Class - ObjcDataAddress).data();
+                //try to fix ClassInfo address error(isSwift)
+                DEBUG(errs() << "[+] Castlist ClassData->Data address: " << utohexstr(ClassData->Data) << "\n");
+                isSwiftClass = (bool)(ClassData->Data & 1);
+                ClassInfo = (ObjcClassInfoStruct_t*)ObjcConstData.slice(ClassData->Data  -  ObjcConstAddress, isSwiftClass, true).data();
+            }
+            resolveMethods(catInfo, true, CatRef, ClassInfo, isSwiftClass);
         }
-        resolveMethods(catInfo, true, CatRef, ClassInfo, isSwiftClass);
     }
 }
 
