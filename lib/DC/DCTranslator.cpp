@@ -321,7 +321,7 @@ void DCTranslator::translateFunction(
       if (!DIS.translateInst(I, TI)) {
         errs() << "Cannot translate instruction: \n  ";
         errs() << I.Inst << "\n";
-        llvm_unreachable("Couldn't translate instruction\n");
+        // llvm_unreachable("Couldn't translate instruction\n");
       }
       if (AnnotWriter)
         DTIT.trackInst(TI);

@@ -58,6 +58,7 @@ tools/llgo
 tools/polly
 # Sphinx build tree, if building in-source dir.
 docs/_build
+.vscode
 
 #==============================================================================#
 # Files created in tree by the Go bindings.

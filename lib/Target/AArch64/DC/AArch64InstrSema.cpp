@@ -2868,10 +2868,10 @@ void AArch64InstrSema::translateTargetOpcode() {
 }
 
 void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
-    //errs() << "[+]switch: " << IntrinsicID <<"\n";
     switch (IntrinsicID) {
         default:
-            llvm_unreachable("intrinsic not handled");
+            errs() << "[!]intrinsic not handled: " << IntrinsicID <<"\n";
+            // llvm_unreachable("intrinsic not handled");
         case Intrinsic::aarch64_neon_abs:
         {
             Value *op = getNextOperand();
@@ -2979,7 +2979,10 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
         }
         //BugID: tzhuaTai_0x100C392A4
         case Intrinsic::aarch64_neon_fmax: 
-        case Intrinsic::aarch64_neon_fmaxnm: {
+        case Intrinsic::aarch64_neon_fmaxp:
+        case Intrinsic::aarch64_neon_fmaxnm:
+        case Intrinsic::aarch64_neon_fmaxnmp: {
+            errs() << "[+]fmax handled: " << IntrinsicID <<"\n";
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
 
@@ -2997,29 +3000,61 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             break;
         }
-        case Intrinsic::aarch64_neon_fmaxnmp:
+        case Intrinsic::aarch64_neon_fmaxv:
         case Intrinsic::aarch64_neon_fmaxnmv: {
-            //TODO
-            break;
-        }
-        case Intrinsic::aarch64_neon_fmaxp:
-        case Intrinsic::aarch64_neon_fmaxv: {
-            //TODO
+            Value *op = getNextOperand();
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            types.push_back(op->getType());
+
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+
+            op = Builder->CreateZExt(op, intrinsic->getArgumentList().front().getType());
+            std::vector<Value*> args;
+            args.push_back(op);
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
             break;
         }
         case Intrinsic::aarch64_neon_fmin:
-        case Intrinsic::aarch64_neon_fminnm: {
-            //TODO
-            break;
-        }
-        case Intrinsic::aarch64_neon_fminnmp:
-        case Intrinsic::aarch64_neon_fminnmv: {
-            //TODO
-            break;
-        }
         case Intrinsic::aarch64_neon_fminp:
-        case Intrinsic::aarch64_neon_fminv: {
-            //TODO
+        case Intrinsic::aarch64_neon_fminnm:
+        case Intrinsic::aarch64_neon_fminnmp: {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+
+            std::vector<Type*> types;
+            types.push_back(op1->getType());
+
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            Value *result = Builder->CreateCall(intrinsic, args);
+            registerResult(result);
+
+            break;
+        }
+        case Intrinsic::aarch64_neon_fminv:
+        case Intrinsic::aarch64_neon_fminnmv: {
+            Value *op = getNextOperand();
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            types.push_back(op->getType());
+
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+
+            op = Builder->CreateZExt(op, intrinsic->getArgumentList().front().getType());
+            std::vector<Value*> args;
+            args.push_back(op);
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
             break;
         }
         case Intrinsic::aarch64_neon_fmulx: {
@@ -3032,7 +3067,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             Value *op1 = getNextOperand();
 
             std::vector<Type*> types;
-            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            types.push_back(op1->getType());
 
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
@@ -3051,7 +3086,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             Value *op2 = getNextOperand();
 
             std::vector<Type*> types;
-            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            // types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
             types.push_back(op1->getType());
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
@@ -3069,7 +3104,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             Value *op1 = getNextOperand();
 
             std::vector<Type*> types;
-            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            types.push_back(op1->getType());
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
 
@@ -3135,8 +3170,6 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
         case Intrinsic::aarch64_neon_saddlv:
         case Intrinsic::aarch64_neon_saddv: {
             Value *op = getNextOperand();
-            std::vector<Value*> args;
-            args.push_back(op);
 
             std::vector<Type*> types;
             types.push_back(ResEVT.getTypeForEVT(*Ctx));
@@ -3144,7 +3177,11 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
 
-            Value *result = Builder->CreateCall(intrinsic, args);
+            op = Builder->CreateZExt(op, intrinsic->getArgumentList().front().getType());
+            std::vector<Value*> args;
+            args.push_back(op);
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
             break;
         }
@@ -3199,8 +3236,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             break;
         }
         case Intrinsic::aarch64_neon_smax:
-        //BugID: welink_1003F3FD4
-        case Intrinsic::aarch64_neon_smaxp: {
+        case Intrinsic::aarch64_neon_smin: {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
 
@@ -3209,40 +3245,46 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             args.push_back(op2);
 
             std::vector<Type*> types;
-            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
-            //types.push_back(op1->getType());
-            //types.push_back(op2->getType());
+            types.push_back(op1->getType());
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
 
             break;
         }
-        case Intrinsic::aarch64_neon_smaxv: {
-            //TODO
+        //BugID: welink_1003F3FD4
+        case Intrinsic::aarch64_neon_smaxv:
+        case Intrinsic::aarch64_neon_sminv: {
+            Value *op1 = getNextOperand();
+
+            std::vector<Value*> args;
+            args.push_back(op1);
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            types.push_back(op1->getType());
+
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
+
             break;
         }
-        case Intrinsic::aarch64_neon_smin:
+        case Intrinsic::aarch64_neon_smaxp:
         case Intrinsic::aarch64_neon_sminp: {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
 
             std::vector<Value*> args;
             args.push_back(op1);
-            args.push_back(op2);
 
             std::vector<Type*> types;
             types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
-            //types.push_back(op1->getType());
-            //types.push_back(op2->getType());
+
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
 
-            break;
-        }
-        case Intrinsic::aarch64_neon_sminv: {
-            //TODO
             break;
         }
         case Intrinsic::aarch64_neon_smull:
@@ -3271,7 +3313,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
 
-            op = Builder->CreateZExt(op, intrinsic->getArgumentList().front().getType());
+            // op = Builder->CreateZExt(op, intrinsic->getArgumentList().front().getType());
             std::vector<Value*> args;
             args.push_back(op);
 
@@ -3305,7 +3347,6 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             std::vector<Type*> types;
             types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
-            //types.push_back(op1->getType());
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
@@ -3349,15 +3390,26 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
-        case Intrinsic::aarch64_neon_sqshl:
-        case Intrinsic::aarch64_neon_sqshlu:
-        case Intrinsic::aarch64_neon_sqshrn:
-        case Intrinsic::aarch64_neon_sqshrun: {
+        case Intrinsic::aarch64_neon_sqshl: {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
             std::vector<Value*> args;
             args.push_back(op1);
             args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
+            break;
+        }
+        case Intrinsic::aarch64_neon_sqshlu:
+        case Intrinsic::aarch64_neon_sqshrn:
+        case Intrinsic::aarch64_neon_sqshrun: {
+            Value *op1 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
 
             std::vector<Type*> types;
             types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
@@ -3425,8 +3477,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
-        case Intrinsic::aarch64_neon_sshl:
-        case Intrinsic::aarch64_neon_sshll: {
+        case Intrinsic::aarch64_neon_sshl: {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
             std::vector<Value*> args;
@@ -3435,6 +3486,18 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             std::vector<Type*> types;
             types.push_back(op1->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
+            break;
+        }
+        case Intrinsic::aarch64_neon_sshll: {
+            Value *op1 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
@@ -3468,11 +3531,9 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             Value *op2 = getNextOperand();
             std::vector<Value*> args;
             args.push_back(op1);
-            args.push_back(op2);
 
             std::vector<Type*> types;
             types.push_back(op1->getType());
-            types.push_back(op2->getType());
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
@@ -3486,6 +3547,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             //TODO
             break;
         }
+        case Intrinsic::aarch64_neon_uaddlv:
         case Intrinsic::aarch64_neon_uaddlp: {
             Value *op = getNextOperand();
             std::vector<Value*> args;
@@ -3501,9 +3563,22 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
-        case Intrinsic::aarch64_neon_uaddlv:
         case Intrinsic::aarch64_neon_uaddv: {
-            //TODO
+            Value *op = getNextOperand();
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            types.push_back(op->getType());
+
+
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+
+            op = Builder->CreateZExt(op, intrinsic->getArgumentList().front().getType());
+            std::vector<Value*> args;
+            args.push_back(op);
+
+            Value *result = Builder->CreateCall(intrinsic, args);
+            registerResult(result);
             break;
         }
         case Intrinsic::aarch64_neon_uhadd: {
@@ -3536,21 +3611,52 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             break;
         }
         case Intrinsic::aarch64_neon_umax:
-        case Intrinsic::aarch64_neon_umaxp: {
-            //TODO
+        case Intrinsic::aarch64_neon_umin: {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(op1->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
             break;
         }
-        case Intrinsic::aarch64_neon_umaxv: {
-            //TODO
-            break;
-        }
-        case Intrinsic::aarch64_neon_umin:
-        case Intrinsic::aarch64_neon_uminp: {
-            //TODO
-            break;
-        }
+        case Intrinsic::aarch64_neon_umaxv:
         case Intrinsic::aarch64_neon_uminv: {
-            //TODO
+            Value *op = getNextOperand();
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            types.push_back(op->getType());
+
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+            op = Builder->CreateZExt(op, intrinsic->getArgumentList().front().getType());
+            std::vector<Value*> args;
+            args.push_back(op);
+
+            Value *result = Builder->CreateCall(intrinsic, args);
+            registerResult(result);
+            break;
+        }
+        case Intrinsic::aarch64_neon_umaxp:
+        case Intrinsic::aarch64_neon_uminp: {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+
+            std::vector<Type*> types;
+            types.push_back(op1->getType());
+
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            Value *result = Builder->CreateCall(intrinsic, args);
+            registerResult(result);
             break;
         }
         case Intrinsic::aarch64_neon_umull: {
@@ -3584,6 +3690,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
+        case Intrinsic::aarch64_neon_uqshl:
         case Intrinsic::aarch64_neon_uqrshl:
         //BugID: tzhuaTai_1012FC820
         case Intrinsic::aarch64_neon_uqrshrn:{
@@ -3598,10 +3705,6 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
-            break;
-        }
-        case Intrinsic::aarch64_neon_uqshl: {
-            //TODO
             break;
         }
         //BugID: tzhuaTai_1012FBF28
@@ -3645,6 +3748,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             std::vector<Type*> types;
             types.push_back(ResEVT.getTypeForEVT(*Ctx));
+            types.push_back(op->getType());
 
             Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
 
@@ -3682,8 +3786,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             //TODO
             break;
         }
-        case Intrinsic::aarch64_neon_ushl:
-        case Intrinsic::aarch64_neon_ushll: {
+        case Intrinsic::aarch64_neon_ushl: {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
             std::vector<Value*> args;
@@ -3692,59 +3795,76 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
 
             std::vector<Type*> types;
             types.push_back(op1->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
+            break;
+        }
+        case Intrinsic::aarch64_neon_ushll: {
+            Value *op1 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
             break;
         }
         case Intrinsic::aarch64_neon_usqadd: {
-            //TODO
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(op1->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
             break;
         }
         case Intrinsic::aarch64_neon_vcopy_lane: {
             //TODO
             break;
         }
-        case Intrinsic::aarch64_neon_vcvtfp2fxs: {
+        case Intrinsic::aarch64_neon_vcvtfp2fxs:
+        case Intrinsic::aarch64_neon_vcvtfp2fxu: {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
-            //BUGID: 100B1E8C4
-           //try to fix int32 int64 type error
-           //TODO: to check if correct. 
-            op2 = Builder->CreateIntCast(op2, Builder->getInt32Ty(), true);
-
             std::vector<Value*> args;
             args.push_back(op1);
             args.push_back(op2);
 
             std::vector<Type*> types;
-            types.push_back(op2->getType());
-            //types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
             types.push_back(op1->getType());
 
-            
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
             registerResult(result);
             break;
         }
-        case Intrinsic::aarch64_neon_vcvtfp2fxu: {
-            //TODO
-            break;
-        }
-        case Intrinsic::aarch64_neon_vcvtfp2hf: {
-            //TODO
-            break;
-        }
-        case Intrinsic::aarch64_neon_vcvtfxs2fp: {
-            //TODO
-            break;
-        }
-        case Intrinsic::aarch64_neon_vcvtfxu2fp: {
-            //TODO
-            break;
-        }
+        case Intrinsic::aarch64_neon_vcvtfp2hf:
         case Intrinsic::aarch64_neon_vcvthf2fp: {
             //TODO
+            break;
+        }
+        case Intrinsic::aarch64_neon_vcvtfxs2fp:
+        case Intrinsic::aarch64_neon_vcvtfxu2fp: {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            types.push_back(op1->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
             break;
         }
         case Intrinsic::aarch64_neon_vsli:
@@ -3778,8 +3898,19 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
-        case Intrinsic::aarch64_sdiv: {
-            //TODO
+        case Intrinsic::aarch64_sdiv:
+        case Intrinsic::aarch64_udiv: {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+
+            std::vector<Type*> types;
+            types.push_back(op1->getType());
+
+            Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
             break;
         }
         case Intrinsic::aarch64_sisd_fabd: {
@@ -3807,10 +3938,6 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             break;
         }
         case Intrinsic::aarch64_thread_pointer: {
-            //TODO
-            break;
-        }
-        case Intrinsic::aarch64_udiv: {
             //TODO
             break;
         }

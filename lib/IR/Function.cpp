@@ -512,9 +512,9 @@ std::string Intrinsic::getName(ID id, ArrayRef<Type*> Tys) {
     Result += "." + getMangledTypeStr(Tys[i]);
   }
   
-  if (Tys.size() == 2) {
-    errs() << "[+]Result: " << Result << "\n";
-  }
+  // if (Tys.size() == 2) {
+  //   errs() << "[+]Result: " << Result << "\n";
+  // }
   
   return Result;
 }

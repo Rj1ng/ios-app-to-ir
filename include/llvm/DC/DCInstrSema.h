@@ -142,7 +142,7 @@ protected:
   void insertCall(Value *CallTarget);
   Value *insertTranslateAt(Value *OrigTarget);
 
-  void translateOpcode(unsigned Opcode);
+  bool translateOpcode(unsigned Opcode);
 
   virtual void translateTargetOpcode() = 0;
   virtual void translateCustomOperand(unsigned OperandType,

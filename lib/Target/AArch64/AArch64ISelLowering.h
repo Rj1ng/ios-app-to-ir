@@ -491,6 +491,7 @@ private:
     // FIXME: clang has code for 'Ump', 'Utf', 'Usa', and 'Ush' but these are
     //        followed by llvm_unreachable so we'll leave them unimplemented in
     //        the backend for now.
+    // TODO: Ushr implement.
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
   }
 
