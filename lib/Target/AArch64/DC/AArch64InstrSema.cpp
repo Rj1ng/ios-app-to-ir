@@ -3870,8 +3870,7 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             registerResult(result);
             break;
         }
-        case Intrinsic::aarch64_neon_vsli:
-        case Intrinsic::aarch64_neon_vsri: {
+        case Intrinsic::aarch64_neon_vsli: {
             Value *op1 = getNextOperand();
             Value *op2 = getNextOperand();
             Value *op3 = getNextOperand();
@@ -3885,6 +3884,26 @@ void AArch64InstrSema::translateTargetIntrinsic(unsigned IntrinsicID) {
             //   types.push_back(op1->getType());
 
             Value *result = Builder->CreateCall(Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types), args);
+            registerResult(result);
+            break;
+        }
+        case Intrinsic::aarch64_neon_vsri: {
+            Value *op1 = getNextOperand();
+            Value *op2 = getNextOperand();
+            Value *op3 = getNextOperand();
+            std::vector<Value*> args;
+            args.push_back(op1);
+            args.push_back(op2);
+            // args.push_back(op3);
+
+            std::vector<Type*> types;
+            // types.push_back(ResEVT.getTypeForEVT(getGlobalContext()));
+            types.push_back(op1->getType());
+            Function *intrinsic = Intrinsic::getDeclaration(TheModule, (llvm::Intrinsic::ID)IntrinsicID, types);
+            op3 = Builder->CreateZExtOrTrunc(op3, intrinsic->getArgumentList().back().getType());
+            args.push_back(op3);
+
+            Value *result = Builder->CreateCall(intrinsic, args);
             registerResult(result);
             break;
         }

@@ -1,5 +1,4 @@
 #include <llvm/ADT/StringExtras.h>
-#include <llvm/Object/ObjectiveCFile.h>
 #include "llvm/Object/ObjectiveCFile.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/LEB128.h"
@@ -72,10 +71,13 @@ void ObjectiveCFile::resolveMethods() {
 
     for (unsigned ClasslistIdx = 0; ClasslistIdx < ObjcClasslistData.size(); ClasslistIdx += sizeof(uint64_t)) {
         uint64_t ClassRef = *((uint64_t*)ObjcClasslistData.slice(ClasslistIdx).data());
-
-        assert(ObjcDataAddress <= ClassRef && ClassRef <= ObjcDataAddress + ObjcDataData.size());
-
-        ObjcDataStruct_t *ClassData = (ObjcDataStruct_t*)ObjcDataData.slice(ClassRef - ObjcDataAddress).data();
+        ObjcDataStruct_t *ClassData;
+        if (ClassRef >= DataAddress) {
+            ClassData = (ObjcDataStruct_t*)DataData.slice(ClassRef - DataAddress).data();
+        } else {
+            assert(ObjcDataAddress <= ClassRef && ClassRef <= ObjcDataAddress + ObjcDataData.size());
+            ClassData = (ObjcDataStruct_t*)ObjcDataData.slice(ClassRef - ObjcDataAddress).data();
+        }
         DEBUG(errs() << "[+] ObjcDataAddress address: 0x" << utohexstr(ObjcDataAddress) << "\n");
         DEBUG(errs() << "[+] ClassData ISA address: 0x" << utohexstr(ClassData->ISA) << "\n");
 
@@ -104,7 +106,7 @@ void ObjectiveCFile::resolveMethods() {
                 resolveMethods(ISAClassInfo, true, true);
             } else{
                 ObjcDataStruct_t *ISAData = (ObjcDataStruct_t *) ObjcDataData.slice(ClassData->ISA - ObjcDataAddress).data();
-                (dbgs() << "ISA: " << utohexstr(ISAData->ISA) << "\n");
+                DEBUG(dbgs() << "ISA: " << utohexstr(ISAData->ISA) << "\n");
 
                 ObjcClassInfoStruct_t *ISAClassInfo = (ObjcClassInfoStruct_t*)ObjcConstData.slice(ISAData->Data - ObjcConstAddress).data();
                 //errs() << utohexstr(ISAClassInfo->BaseMethods) << "\n";
@@ -194,8 +196,8 @@ void ObjectiveCFile::resolveMethods(ObjcClassInfoStruct_t *ClassInfo, bool Class
             assert(true);
         }
         std::string N = ((ClassMethods ? "+[" : "-[") + ClassName + " " + Methodname + "]").str();
-        errs() << utohexstr(MethodlistEntry[MethodIdx].Implementation) << ": " << N << "\n";
-                FunctionNames.insert(std::pair<uint64_t, std::string>(MethodlistEntry[MethodIdx].Implementation, N));
+        // errs() << utohexstr(MethodlistEntry[MethodIdx].Implementation) << ": " << N << "\n";
+        FunctionNames.insert(std::pair<uint64_t, std::string>(MethodlistEntry[MethodIdx].Implementation, N));
     }
     //errs() << "[+]resolveMethods end.\n";
 }
@@ -236,7 +238,7 @@ void ObjectiveCFile::resolveMethods(ObjcCatInfoStruct_t *CatInfo, bool ClassMeth
             StringRef Methodname = getMethodName(ObjcMethodnamesData, ObjcMethodnamesAddress,
                                                  MethodlistEntry[MethodIdx].Name);
             StringRef N = ("-[" + ClassName + " " + Methodname + "]").str();
-            errs() << utohexstr(MethodlistEntry[MethodIdx].Implementation) << ": " << N << "\n";
+            // errs() << utohexstr(MethodlistEntry[MethodIdx].Implementation) << ": " << N << "\n";
             FunctionNames.insert(std::pair<uint64_t, std::string>(MethodlistEntry[MethodIdx].Implementation, N.str()));
         }
     }
@@ -252,7 +254,7 @@ void ObjectiveCFile::resolveMethods(ObjcCatInfoStruct_t *CatInfo, bool ClassMeth
             StringRef Methodname = getMethodName(ObjcMethodnamesData, ObjcMethodnamesAddress,
                                                  MethodlistEntry[MethodIdx].Name);
             StringRef N = ("+[" + ClassName + " " + Methodname + "]").str();
-            errs() << utohexstr(MethodlistEntry[MethodIdx].Implementation) << ": " << N << "\n";
+            // errs() << utohexstr(MethodlistEntry[MethodIdx].Implementation) << ": " << N << "\n";
             FunctionNames.insert(std::pair<uint64_t, std::string>(MethodlistEntry[MethodIdx].Implementation, N.str()));
         }
     }

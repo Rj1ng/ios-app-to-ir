@@ -40,7 +40,7 @@ bool FunctionNamePass::runOnModule(Module &M) {
     std::vector<std::string> FunctionsToReplace;
     for (StubToLocalMap_t::iterator it = StubToLocal.begin(); it != StubToLocal.end(); ++it) {
         FunctionsToReplace.push_back("fn_" + utohexstr(it->first));
-        errs() << "Replace calls to: fn_" <<utohexstr(it->first) << "\n";
+        DEBUG(errs() << "Replace calls to: fn_" <<utohexstr(it->first) << "\n");
     }
 
 
@@ -65,7 +65,7 @@ bool FunctionNamePass::runOnModule(Module &M) {
                     if (Addr) {
                         uint64_t R = StubToLocal[Addr];
                         StringRef RName = "fn_" + utohexstr(R);
-                        (errs() << "Replace " << Call->getCalledFunction()->getName() << " with " << RName << "\n");
+                        DEBUG(errs() << "Replace " << Call->getCalledFunction()->getName() << " with " << RName << "\n");
                         Function *F = M.getFunction(RName);
                         assert(F);
                         Call->setCalledFunction(F);
@@ -92,7 +92,7 @@ bool FunctionNamePass::runOnModule(Module &M) {
 
         if (A) {
             if (FunctionNames.find(A) != FunctionNames.end()) {
-                (errs() << "Change fn_" << utohexstr(A) << " to " << FunctionNames[A] << "\n");
+                DEBUG(errs() << "Change fn_" << utohexstr(A) << " to " << FunctionNames[A] << "\n");
                 F_it->setName(FunctionNames[A]);
 
             }

@@ -240,8 +240,7 @@ void CallInst::init(FunctionType *FTy, Value *Func, ArrayRef<Value *> Args,
     //errs() << "[+]FTy->getParamType(" << i << "): " << FTy->getParamType(i) << "\tArgs[i]->getType(): " << Args[i]->getType() << "\n";
     //FTy->getParamType(i)->dump();
     //Args[i]->getType()->dump();
-    assert((i >= FTy->getNumParams() || 
-            FTy->getParamType(i) == Args[i]->getType()) &&
+    assert((i >= FTy->getNumParams()) || (FTy->getParamType(i) == Args[i]->getType()) &&
            "Calling a function with a bad signature!");
   }
 #endif
